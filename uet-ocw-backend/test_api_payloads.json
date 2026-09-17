@@ -1,0 +1,304 @@
+{
+  "base_url": "http://127.0.0.1:5001",
+  "note": "Create the related parent records first: faculty -> department -> course/internship -> resources.",
+  "auth": {
+    "health": {
+      "method": "GET",
+      "url": "/api/auth/health",
+      "body": null
+    }
+  },
+  "faculties": {
+    "list": {
+      "method": "GET",
+      "url": "/api/faculties"
+    },
+    "get_by_id": {
+      "method": "GET",
+      "url": "/api/faculties/1"
+    },
+    "create": {
+      "method": "POST",
+      "url": "/api/faculties",
+      "body": {
+        "name": "Faculty of Computer Science",
+        "short_name": "FCS",
+        "description": "Faculty focusing on software, AI, and data engineering.",
+        "logo": "https://example.com/images/fcs-logo.png",
+        "website_url": "https://cs.example.edu.pk",
+        "display_order": 1,
+        "is_active": true
+      }
+    },
+    "update": {
+      "method": "PUT",
+      "url": "/api/faculties/1",
+      "body": {
+        "name": "Faculty of Computer Science",
+        "short_name": "FCS",
+        "description": "Updated faculty description.",
+        "logo": "https://example.com/images/fcs-logo.png",
+        "website_url": "https://cs.example.edu.pk",
+        "display_order": 1,
+        "is_active": true
+      }
+    },
+    "delete": {
+      "method": "DELETE",
+      "url": "/api/faculties/1"
+    }
+  },
+  "departments": {
+    "list": {
+      "method": "GET",
+      "url": "/api/departments"
+    },
+    "get_by_id": {
+      "method": "GET",
+      "url": "/api/departments/1"
+    },
+    "create": {
+      "method": "POST",
+      "url": "/api/departments",
+      "body": {
+        "faculty_id": 1,
+        "name": "Software Engineering Department",
+        "short_name": "SE",
+        "department_type": "DEPARTMENT",
+        "description": "Department focused on software engineering and systems design.",
+        "logo": "https://example.com/images/se-logo.png",
+        "website_url": "https://se.example.edu.pk",
+        "display_order": 1,
+        "is_active": true
+      }
+    },
+    "update": {
+      "method": "PATCH",
+      "url": "/api/departments/1",
+      "body": {
+        "name": "Software Engineering Department",
+        "short_name": "SE",
+        "department_type": "DEPARTMENT",
+        "description": "Updated description for software engineering.",
+        "display_order": 2,
+        "is_active": true
+      }
+    },
+    "delete": {
+      "method": "DELETE",
+      "url": "/api/departments/1"
+    }
+  },
+  "courses": {
+    "list": {
+      "method": "GET",
+      "url": "/api/courses"
+    },
+    "get_by_id": {
+      "method": "GET",
+      "url": "/api/courses/1"
+    },
+    "create": {
+      "method": "POST",
+      "url": "/api/courses",
+      "body": {
+        "department_id": 1,
+        "course_code": "CS-101",
+        "title": "Introduction to Programming",
+        "slug": "introduction-to-programming",
+        "short_description": "Basic programming concepts and problem solving.",
+        "description": "This course introduces students to variables, loops, functions, conditionals, and object-oriented thinking using Python.",
+        "instructor_name": "Dr. Ali Ahmed",
+        "instructor_email": "ali.ahmed@example.edu.pk",
+        "level": "UNDERGRADUATE",
+        "semester": "Spring 2026",
+        "academic_year": "2025-2026",
+        "thumbnail": "https://example.com/images/course-python.jpg",
+        "status": "PUBLISHED",
+        "display_order": 1
+      }
+    },
+    "update": {
+      "method": "PUT",
+      "url": "/api/courses/1",
+      "body": {
+        "department_id": 1,
+        "course_code": "CS-101",
+        "title": "Introduction to Programming",
+        "slug": "introduction-to-programming",
+        "short_description": "Updated course overview.",
+        "description": "Updated syllabus and learning outcomes.",
+        "instructor_name": "Dr. Ali Ahmed",
+        "instructor_email": "ali.ahmed@example.edu.pk",
+        "level": "UNDERGRADUATE",
+        "semester": "Spring 2026",
+        "academic_year": "2025-2026",
+        "thumbnail": "https://example.com/images/course-python.jpg",
+        "status": "PUBLISHED",
+        "display_order": 1
+      }
+    },
+    "delete": {
+      "method": "DELETE",
+      "url": "/api/courses/1"
+    }
+  },
+  "internships": {
+    "list": {
+      "method": "GET",
+      "url": "/api/internships"
+    },
+    "get_by_id": {
+      "method": "GET",
+      "url": "/api/internships/1"
+    },
+    "create": {
+      "method": "POST",
+      "url": "/api/internships",
+      "body": {
+        "department_id": 1,
+        "title": "Summer Internship 2026",
+        "slug": "summer-internship-2026",
+        "description": "A practical internship in software engineering and AI product development.",
+        "category": "Software Development",
+        "duration": "8 weeks",
+        "eligibility": "Students in final year or with strong programming fundamentals.",
+        "application_url": "https://example.com/internships/apply",
+        "start_date": "2026-06-01",
+        "end_date": "2026-07-31",
+        "status": "OPEN",
+        "display_order": 1
+      }
+    },
+    "update": {
+      "method": "PATCH",
+      "url": "/api/internships/1",
+      "body": {
+        "title": "Summer Internship 2026",
+        "slug": "summer-internship-2026",
+        "description": "Updated internship description.",
+        "category": "Software Development",
+        "duration": "8 weeks",
+        "eligibility": "Updated eligibility criteria.",
+        "application_url": "https://example.com/internships/apply",
+        "start_date": "2026-06-01",
+        "end_date": "2026-07-31",
+        "status": "OPEN",
+        "display_order": 1
+      }
+    },
+    "delete": {
+      "method": "DELETE",
+      "url": "/api/internships/1"
+    }
+  },
+  "course_resources": {
+    "list": {
+      "method": "GET",
+      "url": "/api/course-resources"
+    },
+    "by_course": {
+      "method": "GET",
+      "url": "/api/course-resources/course/1"
+    },
+    "get_by_id": {
+      "method": "GET",
+      "url": "/api/course-resources/1"
+    },
+    "create": {
+      "method": "POST",
+      "url": "/api/course-resources",
+      "body": {
+        "course_id": 1,
+        "title": "Lecture 1 Slides",
+        "resource_type": "POWERPOINT",
+        "description": "Week 1 slides covering introduction to programming.",
+        "file_url": "https://example.com/files/lecture1-slides.pptx",
+        "external_url": null,
+        "file_size": 3120000,
+        "mime_type": "application/vnd.openxmlformats-officedocument.presentationml.presentation",
+        "lecture_number": 1,
+        "display_order": 1,
+        "is_active": true
+      }
+    },
+    "update": {
+      "method": "PATCH",
+      "url": "/api/course-resources/1",
+      "body": {
+        "title": "Lecture 1 Slides",
+        "resource_type": "POWERPOINT",
+        "description": "Updated slide deck for week 1.",
+        "file_url": "https://example.com/files/lecture1-slides-updated.pptx",
+        "external_url": null,
+        "file_size": 3250000,
+        "mime_type": "application/vnd.openxmlformats-officedocument.presentationml.presentation",
+        "lecture_number": 1,
+        "display_order": 1,
+        "is_active": true
+      }
+    },
+    "delete": {
+      "method": "DELETE",
+      "url": "/api/course-resources/1"
+    }
+  },
+  "internship_resources": {
+    "list": {
+      "method": "GET",
+      "url": "/api/internship-resources"
+    },
+    "by_internship": {
+      "method": "GET",
+      "url": "/api/internship-resources/internship/1"
+    },
+    "get_by_id": {
+      "method": "GET",
+      "url": "/api/internship-resources/1"
+    },
+    "create": {
+      "method": "POST",
+      "url": "/api/internship-resources",
+      "body": {
+        "internship_id": 1,
+        "title": "Application Guide",
+        "resource_type": "PDF",
+        "file_url": "https://example.com/files/internship-guide.pdf",
+        "external_url": null,
+        "display_order": 1
+      }
+    },
+    "update": {
+      "method": "PUT",
+      "url": "/api/internship-resources/1",
+      "body": {
+        "internship_id": 1,
+        "title": "Application Guide",
+        "resource_type": "PDF",
+        "file_url": "https://example.com/files/internship-guide-v2.pdf",
+        "external_url": "https://docs.example.com/internship-guide",
+        "display_order": 1
+      }
+    },
+    "delete": {
+      "method": "DELETE",
+      "url": "/api/internship-resources/1"
+    }
+  },
+  "research": {
+    "list": {
+      "method": "GET",
+      "url": "/api/research"
+    },
+    "get_by_id": {
+      "method": "GET",
+      "url": "/api/research/1"
+    }
+  },
+  "menu": {
+    "list": {
+      "method": "GET",
+      "url": "/api/menu"
+    }
+  }
+}
