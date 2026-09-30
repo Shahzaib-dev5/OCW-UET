@@ -65,6 +65,31 @@ class Course(db.Model):
         nullable=True,
     )
 
+    category = db.Column(
+        db.String(150),
+        nullable=True,
+    )
+
+    credit_hours = db.Column(
+        db.Integer,
+        nullable=True,
+    )
+
+    duration = db.Column(
+        db.String(100),
+        nullable=True,
+    )
+
+    course_type = db.Column(
+        db.String(100),
+        nullable=True,
+    )
+
+    syllabus = db.Column(
+        db.Text().with_variant(db.Text, "mysql"),
+        nullable=True,
+    )
+
     instructor_name = db.Column(
         db.String(255),
         nullable=True,

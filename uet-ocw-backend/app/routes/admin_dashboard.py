@@ -570,6 +570,12 @@ ADMIN_DASHBOARD_HTML = """
                 <label>Course code<input name="course_code" placeholder="CS101" /></label>
                 <label class="full">Title<input name="title" required /></label>
                 <label>Slug<input name="slug" required /></label>
+                <label>Teacher name<input name="instructor_name" placeholder="Mr. Anmol Ahmed" /></label>
+                <label>Teacher email<input name="instructor_email" placeholder="teacher@example.edu" /></label>
+                <label>Category<input name="category" placeholder="Humanities" /></label>
+                <label>Credit hours<input name="credit_hours" type="number" min="0" placeholder="3" /></label>
+                <label>Duration<input name="duration" placeholder="32 lectures" /></label>
+                <label>Course type<input name="course_type" placeholder="Hybrid" /></label>
                 <label>Level
                   <select name="level">
                     <option value="UNDERGRADUATE">UNDERGRADUATE</option>
@@ -588,9 +594,12 @@ ADMIN_DASHBOARD_HTML = """
                   </select>
                 </label>
                 <label>Semester<input name="semester" placeholder="Spring 2026" /></label>
+                <label>Academic year<input name="academic_year" placeholder="2025-2026" /></label>
                 <label>Thumbnail image<input name="thumbnail_file" type="file" accept="image/*" /></label>
                 <label>Thumbnail URL<input name="thumbnail" placeholder="/uploads/courses/thumbnails/course.jpg" /></label>
+                <label class="full">Short description<textarea name="short_description"></textarea></label>
                 <label class="full">Description<textarea name="description"></textarea></label>
+                <label class="full">Syllabus<textarea name="syllabus"></textarea></label>
               </div>
               <div class="actions"><button class="btn" type="submit">Save course</button></div>
             </form>
@@ -599,7 +608,7 @@ ADMIN_DASHBOARD_HTML = """
                 <h2>Courses</h2>
                 <button class="btn" type="button" data-add-form="courseForm" data-title-id="courseFormTitle" data-title-text="Add course" onclick="openAddForm('courseForm', 'courseFormTitle', 'Add course')">Add course</button>
               </div>
-              <div class="table-wrap"><table><thead><tr><th>ID</th><th>Image</th><th>Title</th><th>Department</th><th>Status</th><th>Actions</th></tr></thead><tbody id="coursesBody"></tbody></table></div>
+              <div class="table-wrap"><table><thead><tr><th>ID</th><th>Image</th><th>Title</th><th>Teacher</th><th>Category</th><th>Department</th><th>Status</th><th>Actions</th></tr></thead><tbody id="coursesBody"></tbody></table></div>
             </div>
           </div>
         </section>
@@ -700,22 +709,27 @@ ADMIN_DASHBOARD_HTML = """
               <div class="panel-head">
                 <h2>Lectures & course resources</h2>
                 <div class="actions">
-                  <button class="btn" type="button" data-add-form="lectureForm" onclick="openAddForm('lectureForm')">Add lecture</button>
+                  <button class="btn" type="button" data-add-form="lectureForm" data-title-id="lectureFormTitle" data-title-text="Add lecture" onclick="openAddForm('lectureForm', 'lectureFormTitle', 'Add lecture')">Add lecture</button>
                   <button class="btn" type="button" data-add-form="resourceForm" data-title-id="resourceFormTitle" data-title-text="Add course resource" onclick="openAddForm('resourceForm', 'resourceFormTitle', 'Add course resource')">Add resource</button>
                   <button class="btn secondary" type="button" data-add-form="uploadForm" onclick="openAddForm('uploadForm')">Upload file</button>
                 </div>
               </div>
-              <div class="notice">Saved course resources are listed in the table below.</div>
+              <div class="notice">Saved lectures and course resources are listed in the tables below.</div>
             </div>
             <form class="panel add-panel" id="lectureForm">
               <div class="panel-head">
-                <h2>Add lecture</h2>
-                <button class="btn secondary mini" type="button" onclick="hideAddForm('lectureForm')">Close</button>
+                <h2 id="lectureFormTitle">Add lecture</h2>
+                <div class="actions">
+                  <button class="btn secondary mini" type="button" onclick="resetLectureForm()">Clear</button>
+                  <button class="btn secondary mini" type="button" onclick="hideAddForm('lectureForm')">Close</button>
+                </div>
               </div>
               <div class="form-grid">
                 <label>Course<select name="course_id" data-options="courses" required></select></label>
                 <label>Lecture number<input name="lecture_number" type="number" min="1" required /></label>
                 <label class="full">Title<input name="title" required /></label>
+                <label>Duration minutes<input name="duration_minutes" type="number" min="0" /></label>
+                <label>Display order<input name="display_order" type="number" /></label>
                 <label>Video URL<input name="video_url" /></label>
                 <label>Presentation URL<input name="presentation_url" /></label>
                 <label>Notes URL<input name="notes_url" /></label>
@@ -724,6 +738,13 @@ ADMIN_DASHBOARD_HTML = """
               </div>
               <div class="actions"><button class="btn" type="submit">Save lecture</button></div>
             </form>
+            <div class="panel full">
+              <div class="panel-head">
+                <h2>Lectures</h2>
+                <button class="btn" type="button" data-add-form="lectureForm" data-title-id="lectureFormTitle" data-title-text="Add lecture" onclick="openAddForm('lectureForm', 'lectureFormTitle', 'Add lecture')">Add lecture</button>
+              </div>
+              <div class="table-wrap"><table><thead><tr><th>ID</th><th>Course</th><th>No</th><th>Title</th><th>Published</th><th>Material</th><th>Actions</th></tr></thead><tbody id="lecturesBody"></tbody></table></div>
+            </div>
             <form class="panel add-panel" id="resourceForm">
               <div class="panel-head">
                 <h2 id="resourceFormTitle">Add course resource</h2>
@@ -838,7 +859,7 @@ ADMIN_DASHBOARD_HTML = """
   </div>
 
   <script>
-    const state = { courses: [], courseResources: [], departments: [], faculties: [], internships: [], internshipResources: [], researchPapers: [], teacherApps: [], studentApps: [], users: [], user: null };
+    const state = { courses: [], lectures: [], courseResources: [], departments: [], faculties: [], internships: [], internshipResources: [], researchPapers: [], teacherApps: [], studentApps: [], users: [], user: null };
     const $ = (id) => document.getElementById(id);
     const token = () => localStorage.getItem("ocw_admin_token") || "";
     const adminHeaders = () => {
@@ -878,7 +899,7 @@ ADMIN_DASHBOARD_HTML = """
     $("courseForm").addEventListener("submit", (event) => submitJsonWithThumbnail(event, "/api/courses", "courses/thumbnails", "courseFormTitle", "Add course"));
     $("internshipForm").addEventListener("submit", (event) => submitJsonWithThumbnail(event, "/api/internships", "internships/thumbnails", "internshipFormTitle", "Add internship"));
     $("researchForm").addEventListener("submit", submitResearchPaper);
-    $("lectureForm").addEventListener("submit", (event) => submitJson(event, "/api/lectures"));
+    $("lectureForm").addEventListener("submit", submitLecture);
     $("resourceForm").addEventListener("submit", submitCourseResource);
     $("uploadForm").addEventListener("submit", uploadFile);
     $("internshipResourceForm").addEventListener("submit", submitInternshipResource);
@@ -904,9 +925,10 @@ ADMIN_DASHBOARD_HTML = """
           window.location.href = "/admin/login";
           return;
         }
-        const [faculties, courses, courseResources, departments, internships, internshipResources, researchPapers] = await Promise.all([
+        const [faculties, courses, lectures, courseResources, departments, internships, internshipResources, researchPapers] = await Promise.all([
           api("/api/faculties"),
           api("/api/courses"),
+          api("/api/lectures"),
           api("/api/course-resources"),
           api("/api/departments"),
           api("/api/internships"),
@@ -915,6 +937,7 @@ ADMIN_DASHBOARD_HTML = """
         ]);
         state.faculties = faculties.data || [];
         state.courses = courses.data || [];
+        state.lectures = lectures.data || [];
         state.courseResources = courseResources.data || [];
         state.departments = departments.data || [];
         state.internships = internships.data || [];
@@ -1054,6 +1077,24 @@ ADMIN_DASHBOARD_HTML = """
         hideAddForm(form.id);
         await loadAll();
         setNotice("Saved successfully", true);
+      } catch (error) {
+        setNotice(error.message, false);
+      }
+    }
+
+    async function submitLecture(event) {
+      event.preventDefault();
+      const form = event.currentTarget;
+      const payload = formToObject(form);
+      const editId = form.dataset.editId;
+      try {
+        await api(editId ? `/api/lectures/${editId}` : "/api/lectures", {
+          method: editId ? "PUT" : "POST",
+          body: JSON.stringify(payload),
+        });
+        resetLectureForm();
+        await loadAll();
+        setNotice("Lecture saved", true);
       } catch (error) {
         setNotice(error.message, false);
       }
@@ -1306,6 +1347,8 @@ ADMIN_DASHBOARD_HTML = """
           <td>${item.id}</td>
           <td>${thumbnailPreview(item.thumbnail)}</td>
           <td>${escapeHtml(item.title)}</td>
+          <td>${escapeHtml(item.instructor_name || "")}</td>
+          <td>${escapeHtml(item.category || "")}</td>
           <td>${item.department_id || ""}</td>
           <td>${badge(item.status)}</td>
           <td>
@@ -1327,6 +1370,20 @@ ADMIN_DASHBOARD_HTML = """
           </td>
         </tr>
       `);
+      $("lecturesBody").innerHTML = rows(state.lectures, (item) => `
+        <tr>
+          <td>${item.id}</td>
+          <td>${escapeHtml(item.course?.title || item.course_id)}</td>
+          <td>${item.lecture_number || ""}</td>
+          <td>${escapeHtml(item.title)}</td>
+          <td>${item.is_published ? "Yes" : "No"}</td>
+          <td>${lectureMaterialLinks(item)}</td>
+          <td>
+            <button class="btn secondary mini" onclick="editLecture(${item.id})">Edit</button>
+            <button class="btn danger mini" onclick="deleteEntity('/api/lectures/${item.id}')">Delete</button>
+          </td>
+        </tr>
+      `, 7);
       $("courseResourcesBody").innerHTML = rows(state.courseResources, (item) => `
         <tr>
           <td>${item.id}</td>
@@ -1455,11 +1512,20 @@ ADMIN_DASHBOARD_HTML = """
         "course_code",
         "title",
         "slug",
+        "instructor_name",
+        "instructor_email",
+        "category",
+        "credit_hours",
+        "duration",
+        "course_type",
         "level",
         "status",
         "semester",
+        "academic_year",
         "thumbnail",
+        "short_description",
         "description",
+        "syllabus",
       ]);
       $("courseForm").dataset.editId = id;
       $("courseFormTitle").textContent = `Edit course #${id}`;
@@ -1486,6 +1552,28 @@ ADMIN_DASHBOARD_HTML = """
       $("internshipFormTitle").textContent = `Edit internship #${id}`;
       openTab("internships");
       showAddForm("internshipForm");
+    }
+
+    function editLecture(id) {
+      const item = state.lectures.find((lecture) => lecture.id === id);
+      if (!item) return;
+      const form = $("lectureForm");
+      fillForm("lectureForm", item, [
+        "course_id",
+        "lecture_number",
+        "title",
+        "duration_minutes",
+        "display_order",
+        "video_url",
+        "presentation_url",
+        "notes_url",
+        "is_published",
+        "description",
+      ]);
+      form.dataset.editId = id;
+      $("lectureFormTitle").textContent = `Edit lecture #${id}`;
+      openTab("resources");
+      showAddForm("lectureForm");
     }
 
     function editCourseResource(id) {
@@ -1574,6 +1662,15 @@ ADMIN_DASHBOARD_HTML = """
       hideAddForm("resourceForm");
     }
 
+    function resetLectureForm() {
+      const form = $("lectureForm");
+      form.reset();
+      delete form.dataset.editId;
+      $("lectureFormTitle").textContent = "Add lecture";
+      renderSelects();
+      hideAddForm("lectureForm");
+    }
+
     function openTab(tab) {
       document.querySelector(`.nav button[data-tab="${tab}"]`)?.click();
     }
@@ -1598,6 +1695,7 @@ ADMIN_DASHBOARD_HTML = """
       if (formId === "resourceForm") $("courseResourceResult").textContent = "";
       if (formId === "researchForm") $("researchResult").textContent = "";
       if (formId === "internshipResourceForm") $("internshipResourceResult").textContent = "";
+      if (formId === "lectureForm") $("lectureFormTitle").textContent = "Add lecture";
       if (formId === "uploadForm") $("uploadResult").textContent = "";
       if (formId === "credentialForm") $("credentialResult").textContent = "";
       showAddForm(formId);
@@ -1624,8 +1722,8 @@ ADMIN_DASHBOARD_HTML = """
     window.hideAddForm = hideAddForm;
     window.closeOpenForm = closeOpenForm;
 
-    function rows(items, template) {
-      return items.length ? items.map(template).join("") : `<tr><td colspan="5">No records found</td></tr>`;
+    function rows(items, template, colspan = 5) {
+      return items.length ? items.map(template).join("") : `<tr><td colspan="${colspan}">No records found</td></tr>`;
     }
 
     function reviewButtons(basePath) {
@@ -1644,6 +1742,15 @@ ADMIN_DASHBOARD_HTML = """
       const href = item.file_url || item.external_url || "";
       if (!href) return "";
       return `<a href="${escapeHtml(href)}" target="_blank" rel="noopener">Open</a>`;
+    }
+
+    function lectureMaterialLinks(item) {
+      const links = [
+        item.video_url ? `<a href="${escapeHtml(item.video_url)}" target="_blank" rel="noopener">Video</a>` : "",
+        item.presentation_url ? `<a href="${escapeHtml(item.presentation_url)}" target="_blank" rel="noopener">PPT</a>` : "",
+        item.notes_url ? `<a href="${escapeHtml(item.notes_url)}" target="_blank" rel="noopener">Notes</a>` : "",
+      ].filter(Boolean);
+      return links.join(" ");
     }
 
     function paperLink(item) {

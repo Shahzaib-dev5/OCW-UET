@@ -7,9 +7,9 @@ export default function CoursePage() {
   const [faculties, setFaculties] = useState([])
   const [departments, setDepartments] = useState([])
   const [courses, setCourses] = useState([])
+  const [lectureCounts, setLectureCounts] = useState({})
   const [selectedFacultyId, setSelectedFacultyId] = useState(null)
   const [selectedDepartmentId, setSelectedDepartmentId] = useState(null)
-  const [selectedCourseId, setSelectedCourseId] = useState(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
 
@@ -17,19 +17,19 @@ export default function CoursePage() {
     async function loadData() {
       try {
         setLoading(true)
-        const [facultiesData, departmentsData, coursesData] = await Promise.all([
+        setError('')
+        const [facultiesData, departmentsData, coursesData, lecturesData] = await Promise.all([
           fetchJson('/faculties'),
           fetchJson('/departments'),
           fetchJson('/courses'),
+          fetchJson('/lectures'),
         ])
 
         setFaculties(facultiesData)
         setDepartments(departmentsData)
         setCourses(coursesData)
+        setLectureCounts(countLecturesByCourse(lecturesData))
 
-        if (facultiesData[0]) {
-          setSelectedFacultyId(facultiesData[0].id)
-        }
       } catch (loadError) {
         setError(loadError.message || 'Unable to load course information.')
       } finally {
@@ -41,143 +41,158 @@ export default function CoursePage() {
   }, [])
 
   const facultyDepartments = useMemo(() => {
-    if (!selectedFacultyId) return []
+    if (!selectedFacultyId) return departments
     return departments.filter((department) => String(department.faculty_id) === String(selectedFacultyId))
   }, [departments, selectedFacultyId])
 
   useEffect(() => {
-    if (!facultyDepartments.length) {
+    if (!selectedFacultyId || !facultyDepartments.length) {
       setSelectedDepartmentId(null)
       return
     }
 
     if (!facultyDepartments.some((department) => String(department.id) === String(selectedDepartmentId))) {
-      setSelectedDepartmentId(facultyDepartments[0].id)
+      setSelectedDepartmentId(null)
     }
-  }, [facultyDepartments, selectedDepartmentId])
+  }, [facultyDepartments, selectedDepartmentId, selectedFacultyId])
 
-  const departmentCourses = useMemo(() => {
-    if (!selectedDepartmentId) return []
-    return courses.filter((course) => String(course.department_id) === String(selectedDepartmentId))
-  }, [courses, selectedDepartmentId])
-
-  useEffect(() => {
-    if (!departmentCourses.length) {
-      setSelectedCourseId(null)
-      return
+  const filteredCourses = useMemo(() => {
+    if (selectedDepartmentId) {
+      return courses.filter((course) => String(course.department_id) === String(selectedDepartmentId))
     }
 
-    if (!departmentCourses.some((course) => String(course.id) === String(selectedCourseId))) {
-      setSelectedCourseId(departmentCourses[0].id)
+    if (selectedFacultyId) {
+      const departmentIds = new Set(facultyDepartments.map((department) => String(department.id)))
+      return courses.filter((course) => departmentIds.has(String(course.department_id)))
     }
-  }, [departmentCourses, selectedCourseId])
 
-  const selectedCourse = useMemo(
-    () => departmentCourses.find((course) => String(course.id) === String(selectedCourseId)) || null,
-    [departmentCourses, selectedCourseId],
-  )
+    return courses
+  }, [courses, facultyDepartments, selectedDepartmentId, selectedFacultyId])
 
   return (
-    <div className="container page-block">
-      <section className="content-panel">
-        <p className="eyebrow">Course catalog</p>
-        <h2>Choose a faculty and department</h2>
+    <div className="course-page">
+      <section className="course-title-band">
+        <div className="container">
+          <h2>Courses</h2>
+          <div className="breadcrumb-line">
+            <Link to="/">Home</Link>
+            <span>/</span>
+            <span>Hybrid Courses</span>
+          </div>
+        </div>
       </section>
 
-      {error && <div className="alert-box">{error}</div>}
+      <div className="container page-block">
+        {error && <div className="alert-box">{error}</div>}
 
-      {loading ? (
-        <div className="loading-box">Loading courses...</div>
-      ) : (
-        <>
-          <section className="content-panel catalog-filters">
-            <label className="field-label">
-              Faculty
-              <select
-                value={selectedFacultyId || ''}
-                onChange={(event) => {
-                  setSelectedFacultyId(event.target.value)
-                  setSelectedDepartmentId(null)
-                  setSelectedCourseId(null)
-                }}
-              >
-                {faculties.map((faculty) => (
-                  <option key={faculty.id} value={faculty.id}>
-                    {faculty.name}
-                  </option>
-                ))}
-              </select>
-            </label>
-            <label className="field-label">
-              Department
-              <select
-                value={selectedDepartmentId || ''}
-                onChange={(event) => {
-                  setSelectedDepartmentId(event.target.value)
-                  setSelectedCourseId(null)
-                }}
-              >
-                {facultyDepartments.map((department) => (
-                  <option key={department.id} value={department.id}>
-                    {department.name}
-                  </option>
-                ))}
-              </select>
-            </label>
-          </section>
-
-          <section className="catalog-results">
-            <div className="section-heading-row">
-              <h3>Courses</h3>
-              <span>{departmentCourses.length} available</span>
-            </div>
-            <div className="card-grid catalog-grid">
-              {departmentCourses.map((course) => (
-                <article
-                  key={course.id}
-                  className={String(selectedCourseId) === String(course.id) ? 'catalog-card selected' : 'catalog-card'}
+        {loading ? (
+          <div className="loading-box">Loading courses...</div>
+        ) : (
+          <>
+            <section className="course-filters">
+              <label className="field-label">
+                Faculty
+                <select
+                  value={selectedFacultyId || ''}
+                  onChange={(event) => {
+                    setSelectedFacultyId(event.target.value)
+                    setSelectedDepartmentId(null)
+                  }}
                 >
-                  {course.thumbnail ? (
-                    <img className="catalog-card-media" src={fileUrl(course.thumbnail)} alt="" />
-                  ) : (
-                    <div className="catalog-card-media placeholder">{course.title?.slice(0, 1) || 'C'}</div>
-                  )}
-                  <button
-                    type="button"
-                    className="catalog-card-button"
-                    onClick={() => setSelectedCourseId(course.id)}
-                  >
-                    <strong>{course.title}</strong>
-                    <span>{course.course_code || course.level || 'Course'}</span>
-                  </button>
-                  <button
-                    type="button"
-                    className="read-more-button"
-                    onClick={() => navigate(`/courses/${course.id}`)}
-                  >
-                    Read more
-                  </button>
-                </article>
-              ))}
-            </div>
-          </section>
-        </>
-      )}
+                  <option value="">All faculties</option>
+                  {faculties.map((faculty) => (
+                    <option key={faculty.id} value={faculty.id}>
+                      {faculty.name}
+                    </option>
+                  ))}
+                </select>
+              </label>
+              <label className="field-label">
+                Department
+                <select
+                  value={selectedDepartmentId || ''}
+                  onChange={(event) => {
+                    setSelectedDepartmentId(event.target.value)
+                  }}
+                >
+                  <option value="">All departments</option>
+                  {facultyDepartments.map((department) => (
+                    <option key={department.id} value={department.id}>
+                      {department.name}
+                    </option>
+                  ))}
+                </select>
+              </label>
+            </section>
 
-      {selectedCourse && (
-        <section className="content-panel detail-panel">
-          <p className="eyebrow">Selected course</p>
-          <h3>{selectedCourse.title}</h3>
-          <p>{selectedCourse.short_description || selectedCourse.description || 'Course details are available in the backend data.'}</p>
-          <div className="meta-row">
-            <span>{selectedCourse.course_code || 'No code'}</span>
-            <span>{selectedCourse.level || 'Level not specified'}</span>
-            <span>{selectedCourse.semester || 'Semester not specified'}</span>
-          </div>
+            <section className="course-list-panel">
+              {filteredCourses.length ? (
+                filteredCourses.map((course) => (
+                  <article key={course.id} className="course-list-card">
+                    {course.thumbnail ? (
+                      <img className="course-list-media" src={fileUrl(course.thumbnail)} alt="" />
+                    ) : (
+                      <div className="course-list-media placeholder">{course.title?.slice(0, 1) || 'C'}</div>
+                    )}
 
-          <Link to={`/courses/${selectedCourse.id}`} className="primary-button small">Read more</Link>
-        </section>
-      )}
+                    <div className="course-list-body">
+                      <h3>{formatCourseTitle(course)}</h3>
+                      <div className="teacher-strip">
+                        <span className="teacher-avatar">{initials(course.instructor_name)}</span>
+                        <span>{course.instructor_name || 'Teacher not specified'}</span>
+                      </div>
+                      <p>{course.short_description || course.description || 'Course details are available in the backend data.'}</p>
+                      <div className="course-list-footer">
+                        <div className="course-stats" aria-label="Course facts">
+                          <span>{formatLectureCount(lectureCounts[course.id])}</span>
+                          <span>{course.credit_hours || course.credits || course.semester || 'Credit hours not specified'}</span>
+                          <span>{course.level || 'Level not specified'}</span>
+                        </div>
+                        <button
+                          type="button"
+                          className="details-button"
+                          onClick={() => navigate(`/courses/${course.id}`)}
+                        >
+                          Details
+                        </button>
+                      </div>
+                    </div>
+                  </article>
+                ))
+              ) : (
+                <p className="empty-state">No courses are available for the selected filters yet.</p>
+              )}
+            </section>
+          </>
+        )}
+      </div>
     </div>
   )
+}
+
+function countLecturesByCourse(lectures) {
+  return lectures.reduce((counts, lecture) => {
+    counts[lecture.course_id] = (counts[lecture.course_id] || 0) + 1
+    return counts
+  }, {})
+}
+
+function formatCourseTitle(course) {
+  const title = course.title || 'Untitled course'
+  return course.course_code ? `${title} - ${course.course_code}` : title
+}
+
+function formatLectureCount(count = 0) {
+  return `${count} ${count === 1 ? 'Lecture' : 'Lectures'}`
+}
+
+function initials(name) {
+  const value = String(name || '').trim()
+  if (!value) return 'T'
+  return value
+    .split(/\s+/)
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((part) => part[0]?.toUpperCase())
+    .join('')
 }

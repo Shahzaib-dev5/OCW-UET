@@ -153,6 +153,11 @@ _COURSE_FIELDS = {
     "slug",
     "short_description",
     "description",
+    "category",
+    "credit_hours",
+    "duration",
+    "course_type",
+    "syllabus",
     "instructor_name",
     "instructor_email",
     "level",
@@ -214,6 +219,17 @@ def _validated_values(payload, require_required_fields):
         return None, _error("short_description must be a string or null", 400)
     if "description" in values and values["description"] is not None and not isinstance(values["description"], str):
         return None, _error("description must be a string or null", 400)
+    if "category" in values and values["category"] is not None and not isinstance(values["category"], str):
+        return None, _error("category must be a string or null", 400)
+    if "credit_hours" in values and values["credit_hours"] is not None:
+        if not isinstance(values["credit_hours"], int) or values["credit_hours"] < 0:
+            return None, _error("credit_hours must be a non-negative integer or null", 400)
+    if "duration" in values and values["duration"] is not None and not isinstance(values["duration"], str):
+        return None, _error("duration must be a string or null", 400)
+    if "course_type" in values and values["course_type"] is not None and not isinstance(values["course_type"], str):
+        return None, _error("course_type must be a string or null", 400)
+    if "syllabus" in values and values["syllabus"] is not None and not isinstance(values["syllabus"], str):
+        return None, _error("syllabus must be a string or null", 400)
     if "instructor_name" in values and values["instructor_name"] is not None and not isinstance(values["instructor_name"], str):
         return None, _error("instructor_name must be a string or null", 400)
     if "instructor_email" in values and values["instructor_email"] is not None and not isinstance(values["instructor_email"], str):
@@ -254,6 +270,11 @@ def _serialize_course(course):
         "slug": course.slug,
         "short_description": course.short_description,
         "description": course.description,
+        "category": course.category,
+        "credit_hours": course.credit_hours,
+        "duration": course.duration,
+        "course_type": course.course_type,
+        "syllabus": course.syllabus,
         "instructor_name": course.instructor_name,
         "instructor_email": course.instructor_email,
         "level": course.level.value if course.level is not None else None,

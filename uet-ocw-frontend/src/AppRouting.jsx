@@ -4,6 +4,7 @@ import HomePage from './pages/HomePage'
 import AboutPage from './pages/AboutPage'
 import CoursePage from './pages/CoursePage'
 import CourseDetailPage from './pages/CourseDetailPage'
+import BooksPage from './pages/BooksPage'
 import InternshipPage from './pages/InternshipPage'
 import InternshipDetailPage from './pages/InternshipDetailPage'
 import ResearchPage from './pages/ResearchPage'
@@ -18,6 +19,7 @@ export default function AppRouting() {
           <Route path="/about" element={<AboutPage />} />
           <Route path="/courses" element={<CoursePage />} />
           <Route path="/courses/:courseId" element={<CourseDetailPage />} />
+          <Route path="/books" element={<BooksPage />} />
           <Route path="/internships" element={<InternshipPage />} />
           <Route path="/internships/:internshipId" element={<InternshipDetailPage />} />
           <Route path="/research" element={<ResearchPage />} />
