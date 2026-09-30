@@ -8,8 +8,8 @@ export default function Layout({ children }) {
     { to: '/about', label: 'About' },
     { to: '/courses', label: 'Courses' },
     { to: '/books', label: 'Books' },
-    { to: '/internships', label: 'Lab Manuals' },
-    { to: '/research', label: 'Research' },
+    { to: '/internships', label: 'Skills Development' },
+    { to: '/research', label: 'Invited Talks' },
   ]
 
   return (
