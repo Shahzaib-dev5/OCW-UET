@@ -9,7 +9,7 @@ export default function AboutPage() {
             <p className="eyebrow">About UET OCW</p>
             <h2>Academic access designed around students.</h2>
             <p>
-              UET Open Courseware brings courses, lecture material, research and practical learning opportunities into one organized experience.
+              UET Open Courseware brings courses, lecture material, invited talks and skills development opportunities into one organized experience.
             </p>
           </div>
         </div>
@@ -39,7 +39,7 @@ export default function AboutPage() {
           </article>
           <article>
             <span>03</span>
-            <h3>Internships</h3>
+            <h3>Skills Development</h3>
             <p>Find practical opportunities, supporting files and career-focused learning resources.</p>
           </article>
         </section>
@@ -47,7 +47,7 @@ export default function AboutPage() {
         <section className="about-flow-panel">
           <div className="about-flow-item">
             <strong>Discover</strong>
-            <p>Start from a module such as courses, research or internships.</p>
+            <p>Start from a module such as courses, invited talks or skills development.</p>
           </div>
           <div className="about-flow-item">
             <strong>Filter</strong>

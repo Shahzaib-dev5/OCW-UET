@@ -40,7 +40,7 @@ export default function DepartmentDetails({
         </div>
 
         <div>
-          <h3>Internships</h3>
+          <h3>Skills Development</h3>
           <div className="stack-buttons">
             {internships.map((internship) => (
               <button

@@ -1,16 +1,17 @@
 import { useEffect, useMemo, useState } from 'react'
-import { Link, useNavigate } from 'react-router-dom'
-import { fetchJson, fileNameFromUrl, fileUrl } from '../data/api'
+import { Link } from 'react-router-dom'
+import { fetchJson, fileUrl } from '../data/api'
 
 export default function InternshipPage() {
-  const navigate = useNavigate()
   const [faculties, setFaculties] = useState([])
   const [departments, setDepartments] = useState([])
-  const [internships, setInternships] = useState([])
+  const [programs, setPrograms] = useState([])
   const [resources, setResources] = useState([])
   const [selectedFacultyId, setSelectedFacultyId] = useState(null)
   const [selectedDepartmentId, setSelectedDepartmentId] = useState(null)
-  const [selectedInternshipId, setSelectedInternshipId] = useState(null)
+  const [selectedType, setSelectedType] = useState('All')
+  const [searchTerm, setSearchTerm] = useState('')
+  const [debouncedSearchTerm, setDebouncedSearchTerm] = useState('')
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
 
@@ -18,23 +19,20 @@ export default function InternshipPage() {
     async function loadData() {
       try {
         setLoading(true)
-        const [facultiesData, departmentsData, internshipsData, resourcesData] = await Promise.all([
+        setError('')
+        const [facultiesData, departmentsData, programsData, resourcesData] = await Promise.all([
           fetchJson('/faculties'),
           fetchJson('/departments'),
-          fetchJson('/internships'),
-          fetchJson('/internship-resources'),
+          fetchJson('/skills-development'),
+          fetchJson('/skills-development-resources'),
         ])
 
         setFaculties(facultiesData)
         setDepartments(departmentsData)
-        setInternships(internshipsData)
+        setPrograms(programsData)
         setResources(resourcesData)
-
-        if (facultiesData[0]) {
-          setSelectedFacultyId(facultiesData[0].id)
-        }
       } catch (loadError) {
-        setError(loadError.message || 'Unable to load internship information.')
+        setError(loadError.message || 'Unable to load skills development information.')
       } finally {
         setLoading(false)
       }
@@ -43,187 +41,262 @@ export default function InternshipPage() {
     loadData()
   }, [])
 
+  useEffect(() => {
+    const timer = window.setTimeout(() => {
+      setDebouncedSearchTerm(searchTerm.trim().toLowerCase())
+    }, 200)
+
+    return () => window.clearTimeout(timer)
+  }, [searchTerm])
+
   const facultyDepartments = useMemo(() => {
-    if (!selectedFacultyId) return []
+    if (!selectedFacultyId) return departments
     return departments.filter((department) => String(department.faculty_id) === String(selectedFacultyId))
   }, [departments, selectedFacultyId])
 
   useEffect(() => {
-    if (!facultyDepartments.length) {
+    if (!selectedFacultyId || !facultyDepartments.length) {
       setSelectedDepartmentId(null)
       return
     }
 
     if (!facultyDepartments.some((department) => String(department.id) === String(selectedDepartmentId))) {
-      setSelectedDepartmentId(facultyDepartments[0].id)
+      setSelectedDepartmentId(null)
     }
-  }, [facultyDepartments, selectedDepartmentId])
+  }, [facultyDepartments, selectedDepartmentId, selectedFacultyId])
 
-  const departmentInternships = useMemo(() => {
-    if (!selectedDepartmentId) return []
-    return internships.filter((internship) => String(internship.department_id) === String(selectedDepartmentId))
-  }, [internships, selectedDepartmentId])
+  const availableTypes = useMemo(() => {
+    const values = programs.map(getProgramType).filter(Boolean)
+    return ['All', ...sortProgramTypes([...new Set(values)])]
+  }, [programs])
 
-  useEffect(() => {
-    if (!departmentInternships.length) {
-      setSelectedInternshipId(null)
-      return
+  const activeType = availableTypes.includes(selectedType) ? selectedType : 'All'
+
+  const resourceCounts = useMemo(() => countResourcesByProgram(resources), [resources])
+
+  const filteredPrograms = useMemo(() => {
+    let visiblePrograms = programs
+
+    if (selectedDepartmentId) {
+      visiblePrograms = visiblePrograms.filter((program) => String(program.department_id) === String(selectedDepartmentId))
+    } else if (selectedFacultyId) {
+      const departmentIds = new Set(facultyDepartments.map((department) => String(department.id)))
+      visiblePrograms = visiblePrograms.filter((program) => departmentIds.has(String(program.department_id)))
     }
 
-    if (!departmentInternships.some((internship) => String(internship.id) === String(selectedInternshipId))) {
-      setSelectedInternshipId(departmentInternships[0].id)
+    if (activeType !== 'All') {
+      visiblePrograms = visiblePrograms.filter((program) => getProgramType(program) === activeType)
     }
-  }, [departmentInternships, selectedInternshipId])
 
-  const selectedInternship = useMemo(
-    () => departmentInternships.find((internship) => String(internship.id) === String(selectedInternshipId)) || null,
-    [departmentInternships, selectedInternshipId],
-  )
+    if (debouncedSearchTerm) {
+      visiblePrograms = visiblePrograms.filter((program) => {
+        const haystack = `${program.title || ''} ${program.description || ''} ${program.category || ''} ${program.duration || ''}`.toLowerCase()
+        return haystack.includes(debouncedSearchTerm)
+      })
+    }
 
-  const selectedInternshipResources = useMemo(() => {
-    if (!selectedInternshipId) return []
-    return resources.filter((resource) => String(resource.internship_id) === String(selectedInternshipId))
-  }, [resources, selectedInternshipId])
+    return visiblePrograms
+  }, [activeType, debouncedSearchTerm, facultyDepartments, programs, selectedDepartmentId, selectedFacultyId])
+
+  const clearFilters = () => {
+    setSelectedFacultyId(null)
+    setSelectedDepartmentId(null)
+    setSelectedType('All')
+    setSearchTerm('')
+  }
 
   return (
-    <div className="container page-block">
-      <section className="content-panel">
-        <p className="eyebrow">Internship opportunities</p>
-        <h2>Explore internships by faculty and department</h2>
-      </section>
+    <div className="course-page skills-development-page">
+      <header className="course-hero-strip">
+        <div className="container course-hero-inner">
+          <div className="course-hero-copy">
+            <nav className="breadcrumb-line" aria-label="Breadcrumb">
+              <Link to="/">Home</Link>
+              <span aria-hidden="true">/</span>
+              <span>Skills Development</span>
+            </nav>
+            <h2>Explore skills development</h2>
+            <p>Practical programs, files, and career-focused learning resources from UET Lahore</p>
+          </div>
 
-      {error && <div className="alert-box">{error}</div>}
-
-      {loading ? (
-        <div className="loading-box">Loading internships...</div>
-      ) : (
-        <>
-          <section className="content-panel catalog-filters">
-            <label className="field-label">
-              Faculty
-              <select
-                value={selectedFacultyId || ''}
-                onChange={(event) => {
-                  setSelectedFacultyId(event.target.value)
-                  setSelectedDepartmentId(null)
-                  setSelectedInternshipId(null)
-                }}
-              >
-                {faculties.map((faculty) => (
-                  <option key={faculty.id} value={faculty.id}>
-                    {faculty.name}
-                  </option>
-                ))}
-              </select>
-            </label>
-            <label className="field-label">
-              Department
-              <select
-                value={selectedDepartmentId || ''}
-                onChange={(event) => {
-                  setSelectedDepartmentId(event.target.value)
-                  setSelectedInternshipId(null)
-                }}
-              >
-                {facultyDepartments.map((department) => (
-                  <option key={department.id} value={department.id}>
-                    {department.name}
-                  </option>
-                ))}
-              </select>
-            </label>
-          </section>
-
-          <section className="catalog-results">
-            <div className="section-heading-row">
-              <h3>Internships</h3>
-              <span>{departmentInternships.length} available</span>
-            </div>
-            <div className="card-grid catalog-grid">
-              {departmentInternships.map((internship) => (
-                <article
-                  key={internship.id}
-                  className={String(selectedInternshipId) === String(internship.id) ? 'catalog-card selected' : 'catalog-card'}
-                >
-                  {internship.thumbnail ? (
-                    <img className="catalog-card-media" src={fileUrl(internship.thumbnail)} alt="" />
-                  ) : (
-                    <div className="catalog-card-media placeholder">{internship.title?.slice(0, 1) || 'I'}</div>
-                  )}
-                  <button
-                    type="button"
-                    className="catalog-card-button"
-                    onClick={() => setSelectedInternshipId(internship.id)}
-                  >
-                    <strong>{internship.title}</strong>
-                    <span>{internship.status || 'Open'}</span>
-                  </button>
-                  <button
-                    type="button"
-                    className="read-more-button"
-                    onClick={() => navigate(`/internships/${internship.id}`)}
-                  >
-                    Read more
-                  </button>
-                </article>
+          <form className="course-toolbar" role="search" onSubmit={(event) => event.preventDefault()}>
+            <label className="visually-hidden" htmlFor="skills-search">Search skills development programs</label>
+            <input
+              id="skills-search"
+              type="search"
+              value={searchTerm}
+              onChange={(event) => setSearchTerm(event.target.value)}
+              placeholder="Search by title, category, or duration"
+            />
+            <select
+              aria-label="Faculty"
+              value={selectedFacultyId || ''}
+              onChange={(event) => {
+                setSelectedFacultyId(event.target.value)
+                setSelectedDepartmentId(null)
+              }}
+            >
+              <option value="">All faculties</option>
+              {faculties.map((faculty) => (
+                <option key={faculty.id} value={faculty.id}>
+                  {faculty.name}
+                </option>
               ))}
-            </div>
-          </section>
-        </>
-      )}
+            </select>
+            <select
+              aria-label="Department"
+              value={selectedDepartmentId || ''}
+              onChange={(event) => setSelectedDepartmentId(event.target.value)}
+            >
+              <option value="">All departments</option>
+              {facultyDepartments.map((department) => (
+                <option key={department.id} value={department.id}>
+                  {department.name}
+                </option>
+              ))}
+            </select>
+          </form>
+        </div>
+      </header>
 
-      {selectedInternship && (
-        <section className="content-panel detail-panel">
-          <p className="eyebrow">Selected internship</p>
-          <h3>{selectedInternship.title}</h3>
-          <p>{selectedInternship.description || 'Internship details are available from the backend.'}</p>
-          <div className="meta-row">
-            <span>{selectedInternship.category || 'General internship'}</span>
-            <span>{selectedInternship.duration || 'Flexible duration'}</span>
-            <span>{selectedInternship.status || 'Open'}</span>
-          </div>
+      <main className="container page-block course-results-wrap">
+        {error && <div className="alert-box">{error}</div>}
 
-          <Link to={`/internships/${selectedInternship.id}`} className="primary-button small">Read more</Link>
-        </section>
-      )}
-
-      {selectedInternship && (
-        <section className="content-panel resource-manager">
-          <div className="manager-heading">
-            <div>
-              <p className="eyebrow">Resources</p>
-              <h3>Books and files</h3>
-            </div>
-            <span>{selectedInternshipResources.length} resources</span>
-          </div>
-
-          <div className="resource-table">
-            {selectedInternshipResources.length ? (
-              selectedInternshipResources.map((resource) => (
-                <div key={resource.id} className="managed-resource-row">
-                  <div>
-                    <strong>{resource.title}</strong>
-                    <span>{resource.resource_type} | Order {resource.display_order || 0}</span>
-                  </div>
-                  <div className="resource-links">
-                    {resource.file_url && (
-                      <>
-                        <a href={fileUrl(resource.file_url)} target="_blank" rel="noreferrer">View</a>
-                        <a href={fileUrl(resource.file_url)} download={fileNameFromUrl(resource.file_url, resource.title)}>
-                          Download
-                        </a>
-                      </>
-                    )}
-                    {resource.external_url && <a href={fileUrl(resource.external_url)} target="_blank" rel="noreferrer">Link</a>}
-                  </div>
+        {loading ? (
+          <section className="course-grid" aria-label="Loading skills development programs">
+            {[1, 2, 3].map((item) => (
+              <article key={item} className="course-card skeleton-card" aria-hidden="true">
+                <div className="skeleton-media" />
+                <div className="course-card-body">
+                  <span className="skeleton-line wide" />
+                  <span className="skeleton-line" />
+                  <span className="skeleton-line short" />
                 </div>
-              ))
+              </article>
+            ))}
+          </section>
+        ) : (
+          <>
+            <section className="course-results-bar" aria-label="Skills development filters and result count">
+              <div className="course-type-pills" role="list" aria-label="Skills development type filters">
+                {availableTypes.map((type) => (
+                  <button
+                    key={type}
+                    type="button"
+                    className={activeType === type ? 'course-pill active' : 'course-pill'}
+                    aria-pressed={activeType === type}
+                    onClick={() => setSelectedType(type)}
+                  >
+                    {type}
+                  </button>
+                ))}
+              </div>
+              <p className="course-result-count" aria-live="polite">
+                {filteredPrograms.length} {filteredPrograms.length === 1 ? 'program' : 'programs'}
+              </p>
+            </section>
+
+            {filteredPrograms.length ? (
+              <section className="course-grid" aria-label="Skills development programs">
+                {filteredPrograms.map((program) => (
+                  <article key={program.id} className="course-card">
+                    <Link className="course-card-link" to={`/skills-development/${program.id}`} aria-label={`View ${program.title || 'skills development program'}`}>
+                      <div className="course-card-media-wrap">
+                        {program.thumbnail ? (
+                          <img
+                            className="course-card-media"
+                            src={fileUrl(program.thumbnail)}
+                            alt={`${program.title || 'Skills development'} program thumbnail`}
+                            loading="lazy"
+                          />
+                        ) : (
+                          <div className="course-card-media placeholder" aria-hidden="true">
+                            <span>SD</span>
+                          </div>
+                        )}
+                        <span className="course-type-badge">{getProgramType(program)}</span>
+                      </div>
+
+                      <div className="course-card-body">
+                        <h3>{program.title || 'Untitled skills development program'}</h3>
+                        <div className="teacher-strip compact">
+                          <span className="teacher-avatar">{initials(program.category || program.title)}</span>
+                          <span>{program.category || 'Skills development'}</span>
+                        </div>
+                      </div>
+
+                      <footer className="course-card-footer">
+                        <div className="course-card-meta" aria-label="Skills development facts">
+                          <span>{formatResourceCount(resourceCounts[program.id])}</span>
+                          {program.duration && <span>{program.duration}</span>}
+                          <span>{program.status || 'Open'}</span>
+                        </div>
+                        <span className="course-view-link">
+                          View program
+                          <svg aria-hidden="true" viewBox="0 0 16 16" focusable="false">
+                            <path d="M6 3.5 10.5 8 6 12.5" />
+                          </svg>
+                        </span>
+                      </footer>
+                    </Link>
+                  </article>
+                ))}
+              </section>
             ) : (
-              <p className="empty-state">No resources are linked to this internship yet.</p>
+              <section className="course-empty-state" aria-live="polite">
+                <h3>No skills development programs match your search</h3>
+                <p>Try a different keyword, faculty, department, or program type.</p>
+                <button type="button" className="details-button" onClick={clearFilters}>
+                  Clear filters
+                </button>
+              </section>
             )}
-          </div>
-        </section>
-      )}
+          </>
+        )}
+      </main>
     </div>
   )
+}
+
+function countResourcesByProgram(resources) {
+  return resources.reduce((counts, resource) => {
+    counts[resource.internship_id] = (counts[resource.internship_id] || 0) + 1
+    return counts
+  }, {})
+}
+
+function sortProgramTypes(types) {
+  return types.sort((left, right) => {
+    if (left === 'Skills Development') return -1
+    if (right === 'Skills Development') return 1
+    return left.localeCompare(right)
+  })
+}
+
+function getProgramType(program) {
+  return titleCaseType(program.category || 'Skills Development')
+}
+
+function formatResourceCount(count = 0) {
+  if (!count) return 'No resources yet'
+  return `${count} ${count === 1 ? 'resource' : 'resources'}`
+}
+
+function titleCaseType(value) {
+  return String(value || '')
+    .trim()
+    .replace(/[_-]+/g, ' ')
+    .toLowerCase()
+    .replace(/\b\w/g, (letter) => letter.toUpperCase())
+}
+
+function initials(name) {
+  const value = String(name || '').trim()
+  if (!value) return 'SD'
+  return value
+    .split(/\s+/)
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((part) => part[0]?.toUpperCase())
+    .join('')
 }

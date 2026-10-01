@@ -15,7 +15,7 @@ export default function HomePage() {
         setError('')
         const [coursesData, internshipsData] = await Promise.all([
           fetchJson('/courses'),
-          fetchJson('/internships'),
+          fetchJson('/skills-development'),
         ])
 
         setCourses(coursesData)
@@ -41,11 +41,11 @@ export default function HomePage() {
             <p className="eyebrow">UET Open Courseware</p>
             <h2>Learning resources, courses and opportunities in one place.</h2>
             <p>
-              Explore academic modules, course material, research work and internship pathways from the University of Engineering and Technology.
+              Explore academic modules, course material, invited talks and skills development pathways from the University of Engineering and Technology.
             </p>
             <div className="home-hero-actions">
               <Link className="primary-button" to="/courses">Explore Courses</Link>
-              <Link className="secondary-button light" to="/internships">View Internships</Link>
+              <Link className="secondary-button light" to="/skills-development">View Skills Development</Link>
             </div>
           </div>
         </div>
@@ -65,9 +65,9 @@ export default function HomePage() {
             <strong>Courses</strong>
             <p>Browse course details, teachers, lectures and learning material.</p>
           </Link>
-          <Link className="module-card" to="/internships">
+          <Link className="module-card" to="/skills-development">
             <span>02</span>
-            <strong>Internships</strong>
+            <strong>Skills Development</strong>
             <p>Find practical learning opportunities and supporting resources.</p>
           </Link>
           <Link className="module-card" to="/books">
@@ -122,8 +122,8 @@ export default function HomePage() {
             </section>
 
             <section className="home-section-heading">
-              <p className="eyebrow">Featured internships</p>
-              <h2>Practical opportunities</h2>
+              <p className="eyebrow">Featured skills development</p>
+              <h2>Practical learning programs</h2>
             </section>
 
             <section className="home-feature-grid">
@@ -133,21 +133,21 @@ export default function HomePage() {
                     {internship.thumbnail ? (
                       <img src={fileUrl(internship.thumbnail)} alt="" />
                     ) : (
-                      <div className="home-feature-placeholder">{internship.title?.slice(0, 1) || 'I'}</div>
+                      <div className="home-feature-placeholder">{internship.title?.slice(0, 1) || 'S'}</div>
                     )}
                     <div>
-                      <h3>{internship.title || 'Untitled internship'}</h3>
-                      <p>{internship.description || 'Internship details are available in the internship catalog.'}</p>
+                      <h3>{internship.title || 'Untitled skills development program'}</h3>
+                      <p>{internship.description || 'Skills development details are available in the catalog.'}</p>
                       <div className="home-card-meta">
                         <span>{internship.category || 'General'}</span>
                         <span>{internship.duration || 'Flexible duration'}</span>
                       </div>
-                      <Link className="details-button" to={`/internships/${internship.id}`}>Details</Link>
+                      <Link className="details-button" to={`/skills-development/${internship.id}`}>Details</Link>
                     </div>
                   </article>
                 ))
               ) : (
-                <p className="empty-state">No internships are available yet.</p>
+                <p className="empty-state">No skills development programs are available yet.</p>
               )}
             </section>
 

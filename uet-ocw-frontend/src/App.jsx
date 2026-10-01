@@ -30,9 +30,9 @@ function App() {
           fetchJson('/faculties'),
           fetchJson('/departments'),
           fetchJson('/courses'),
-          fetchJson('/internships'),
+          fetchJson('/skills-development'),
           fetchJson('/course-resources'),
-          fetchJson('/internship-resources'),
+          fetchJson('/skills-development-resources'),
         ])
 
         setFaculties(facultiesData)
@@ -205,7 +205,7 @@ function App() {
                 title={selectedInternship.title}
                 description={selectedInternship.description}
                 items={selectedInternshipResources}
-                typeLabel="internship"
+                typeLabel="skills development"
               />
             )}
           </div>

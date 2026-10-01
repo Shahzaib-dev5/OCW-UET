@@ -8,8 +8,9 @@ export default function Layout({ children }) {
     { to: '/about', label: 'About' },
     { to: '/courses', label: 'Courses' },
     { to: '/books', label: 'Books' },
-    { to: '/internships', label: 'Skills Development' },
-    { to: '/research', label: 'Invited Talks' },
+    { to: '/skills-development', label: 'Skills Development' },
+    { to: '/invited-talks', label: 'Invited Talks' },
+    //{ to: '/research', label: 'Research' },
   ]
 
   return (
@@ -48,7 +49,7 @@ export default function Layout({ children }) {
               </div>
             </div>
             <p>
-              Explore course material, lab manuals, and research resources from University of
+              Explore course material, skills development resources, and invited talks from University of
               Engineering and Technology Lahore.
             </p>
           </section>
