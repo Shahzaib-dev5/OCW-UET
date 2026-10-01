@@ -561,6 +561,23 @@ p {
   width: 100%;
 }
 
+.home-feature-placeholder.title-image-fallback {
+  align-items: center;
+  background:
+    linear-gradient(135deg, rgba(15, 134, 220, 0.9), rgba(17, 44, 74, 0.94)),
+    radial-gradient(circle at 18% 20%, rgba(255, 255, 255, 0.22), transparent 30%);
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  justify-content: center;
+  padding: 24px;
+  text-align: center;
+}
+
+.home-feature-placeholder.title-image-fallback strong {
+  font-size: clamp(1.1rem, 4vw, 1.65rem);
+}
+
 .home-feature-card > div:last-child {
   display: flex;
   flex: 1;
@@ -1253,6 +1270,42 @@ p {
   font-size: 0.8125rem;
 }
 
+.title-image-fallback {
+  align-items: center;
+  background:
+    linear-gradient(135deg, #0f86dc, #112c4a),
+    radial-gradient(circle at 20% 18%, rgba(255, 255, 255, 0.28), transparent 32%);
+  color: #ffffff;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  justify-content: center;
+  overflow: hidden;
+  padding: 20px;
+  text-align: center;
+}
+
+.title-image-fallback strong {
+  display: -webkit-box;
+  font-size: 1.1rem;
+  font-weight: 800;
+  line-height: 1.2;
+  max-width: 92%;
+  overflow: hidden;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 3;
+}
+
+.title-image-label {
+  border: 1px solid rgba(255, 255, 255, 0.35);
+  border-radius: 999px;
+  color: rgba(255, 255, 255, 0.88);
+  font-size: 0.65rem;
+  font-weight: 800;
+  padding: 3px 9px;
+  text-transform: uppercase;
+}
+
 .course-type-badge {
   position: absolute;
   top: 10px;
@@ -1382,6 +1435,32 @@ p {
   stroke-linecap: round;
   stroke-linejoin: round;
   stroke-width: 1.9;
+}
+
+.book-card-actions {
+  align-items: center;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  justify-content: flex-end;
+}
+
+.book-card-actions a {
+  border: 1px solid #c8d6e4;
+  border-radius: 999px;
+  color: #0f6fb7;
+  font-size: 0.72rem;
+  font-weight: 800;
+  line-height: 1;
+  padding: 7px 10px;
+  text-decoration: none;
+}
+
+.book-card-actions a:hover,
+.book-card-actions a:focus-visible {
+  background: #eef6fd;
+  border-color: #0f86dc;
+  outline: none;
 }
 
 .course-empty-state {
@@ -2071,7 +2150,8 @@ p {
   margin: 0;
 }
 
-.skills-program-media img {
+.skills-program-media img,
+.skills-program-image {
   display: block;
   width: 100%;
   aspect-ratio: 16 / 9;
@@ -2405,7 +2485,8 @@ p {
   margin: 0;
 }
 
-.course-intro-media img {
+.course-intro-media img,
+.course-intro-image {
   width: 100%;
   aspect-ratio: 16 / 9;
   object-fit: contain;

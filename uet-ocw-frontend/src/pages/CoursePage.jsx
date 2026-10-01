@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
+import TitleImageFallback from '../components/TitleImageFallback'
 import { fetchJson, fileUrl } from '../data/api'
 
 export default function CoursePage() {
@@ -203,18 +204,13 @@ export default function CoursePage() {
                   <article key={course.id} className="course-card">
                     <Link className="course-card-link" to={`/courses/${course.id}`} aria-label={`View ${formatCourseTitle(course)}`}>
                       <div className="course-card-media-wrap">
-                        {course.thumbnail ? (
-                          <img
-                            className="course-card-media"
-                            src={fileUrl(course.thumbnail)}
-                            alt={`${formatCourseTitle(course)} course thumbnail`}
-                            loading="lazy"
-                          />
-                        ) : (
-                          <div className="course-card-media placeholder" aria-hidden="true">
-                            <span>OCW</span>
-                          </div>
-                        )}
+                        <TitleImageFallback
+                          className="course-card-media"
+                          src={course.thumbnail ? fileUrl(course.thumbnail) : ''}
+                          alt={`${formatCourseTitle(course)} course thumbnail`}
+                          title={formatCourseTitle(course)}
+                          label={getCourseType(course)}
+                        />
                         <span className="course-type-badge">{getCourseType(course)}</span>
                       </div>
 

@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
+import TitleImageFallback from '../components/TitleImageFallback'
 import { fetchJson, fileUrl } from '../data/api'
 
 export default function HomePage() {
@@ -73,7 +74,7 @@ export default function HomePage() {
           <Link className="module-card" to="/books">
             <span>03</span>
             <strong>Books</strong>
-            <p>Add and browse course books in a separate book-only module.</p>
+            <p>Browse course books and reading resources in a dedicated library.</p>
           </Link>
           <Link className="module-card" to="/research">
             <span>04</span>
@@ -100,11 +101,12 @@ export default function HomePage() {
               {featuredCourses.length ? (
                 featuredCourses.map((course) => (
                   <article key={course.id} className="home-feature-card">
-                    {course.thumbnail ? (
-                      <img src={fileUrl(course.thumbnail)} alt="" />
-                    ) : (
-                      <div className="home-feature-placeholder">{course.title?.slice(0, 1) || 'C'}</div>
-                    )}
+                    <TitleImageFallback
+                      className="home-feature-placeholder"
+                      src={course.thumbnail ? fileUrl(course.thumbnail) : ''}
+                      title={formatCourseTitle(course)}
+                      label="Course"
+                    />
                     <div>
                       <h3>{formatCourseTitle(course)}</h3>
                       <p>{course.short_description || course.description || 'Course details are available in the course catalog.'}</p>
@@ -130,11 +132,12 @@ export default function HomePage() {
               {featuredInternships.length ? (
                 featuredInternships.map((internship) => (
                   <article key={internship.id} className="home-feature-card">
-                    {internship.thumbnail ? (
-                      <img src={fileUrl(internship.thumbnail)} alt="" />
-                    ) : (
-                      <div className="home-feature-placeholder">{internship.title?.slice(0, 1) || 'S'}</div>
-                    )}
+                    <TitleImageFallback
+                      className="home-feature-placeholder"
+                      src={internship.thumbnail ? fileUrl(internship.thumbnail) : ''}
+                      title={internship.title || 'Skills Development'}
+                      label="Skills Development"
+                    />
                     <div>
                       <h3>{internship.title || 'Untitled skills development program'}</h3>
                       <p>{internship.description || 'Skills development details are available in the catalog.'}</p>

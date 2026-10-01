@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
+import TitleImageFallback from '../components/TitleImageFallback'
 import { fetchJson, fileNameFromUrl, fileUrl } from '../data/api'
 
 export default function InternshipDetailPage() {
@@ -160,10 +161,12 @@ export default function InternshipDetailPage() {
               <div className={internship.thumbnail ? 'skills-about-grid' : 'skills-about-grid no-media'}>
                 {internship.thumbnail && (
                   <figure className="skills-program-media">
-                    <img
-                      src={fileUrl(internship.thumbnail)}
+                    <TitleImageFallback
+                      className="skills-program-image"
+                      src={internship.thumbnail ? fileUrl(internship.thumbnail) : ''}
                       alt={`${internship.title || 'Skills development'} poster`}
-                      loading="lazy"
+                      title={internship.title || 'Skills Development'}
+                      label={programType}
                     />
                   </figure>
                 )}

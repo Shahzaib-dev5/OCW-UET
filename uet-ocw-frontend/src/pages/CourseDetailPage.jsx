@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
+import TitleImageFallback from '../components/TitleImageFallback'
 import { fetchJson, fileNameFromUrl, fileUrl } from '../data/api'
 
 const menuItems = [
@@ -184,10 +185,12 @@ export default function CourseDetailPage() {
             <div className={course.thumbnail ? 'course-intro-grid' : 'course-intro-grid no-media'}>
               {course.thumbnail && (
                 <figure className="course-intro-media">
-                  <img
-                    src={fileUrl(course.thumbnail)}
+                  <TitleImageFallback
+                    className="course-intro-image"
+                    src={course.thumbnail ? fileUrl(course.thumbnail) : ''}
                     alt={`${formatCourseTitle(course)} course poster`}
-                    loading="lazy"
+                    title={formatCourseTitle(course)}
+                    label={courseType}
                   />
                 </figure>
               )}

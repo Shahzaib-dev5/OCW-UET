@@ -1,25 +1,16 @@
 import { useEffect, useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
-import { fetchJson, fileNameFromUrl, fileUrl, sendJson, uploadFile } from '../data/api'
-
-const initialForm = {
-  course_id: '',
-  title: '',
-  description: '',
-  external_url: '',
-  display_order: '',
-  token: '',
-  file: null,
-}
+import TitleImageFallback from '../components/TitleImageFallback'
+import { fetchJson, fileNameFromUrl, fileUrl } from '../data/api'
 
 export default function BooksPage() {
   const [courses, setCourses] = useState([])
   const [resources, setResources] = useState([])
-  const [form, setForm] = useState(initialForm)
+  const [selectedCourseId, setSelectedCourseId] = useState('')
+  const [searchTerm, setSearchTerm] = useState('')
+  const [debouncedSearchTerm, setDebouncedSearchTerm] = useState('')
   const [loading, setLoading] = useState(true)
-  const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
-  const [success, setSuccess] = useState('')
 
   useEffect(() => {
     async function loadBooks() {
@@ -33,9 +24,6 @@ export default function BooksPage() {
 
         setCourses(coursesData)
         setResources(resourcesData)
-        if (coursesData[0]) {
-          setForm((current) => ({ ...current, course_id: String(coursesData[0].id) }))
-        }
       } catch (loadError) {
         setError(loadError.message || 'Unable to load books.')
       } finally {
@@ -46,230 +34,183 @@ export default function BooksPage() {
     loadBooks()
   }, [])
 
+  useEffect(() => {
+    const timer = window.setTimeout(() => {
+      setDebouncedSearchTerm(searchTerm.trim().toLowerCase())
+    }, 200)
+
+    return () => window.clearTimeout(timer)
+  }, [searchTerm])
+
+  const coursesById = useMemo(() => {
+    return courses.reduce((lookup, course) => {
+      lookup[String(course.id)] = course
+      return lookup
+    }, {})
+  }, [courses])
+
   const books = useMemo(
-    () => resources.filter((resource) => resource.resource_type === 'BOOK'),
+    () => resources.filter((resource) => String(resource.resource_type || '').toUpperCase() === 'BOOK'),
     [resources],
   )
 
-  async function handleSubmit(event) {
-    event.preventDefault()
-    setSaving(true)
-    setError('')
-    setSuccess('')
+  const filteredBooks = useMemo(() => {
+    return books.filter((book) => {
+      const course = book.course || coursesById[String(book.course_id)] || null
+      const matchesCourse = !selectedCourseId || String(book.course_id) === String(selectedCourseId)
+      const haystack = `${book.title || ''} ${book.description || ''} ${course?.title || ''} ${course?.course_code || ''}`.toLowerCase()
+      const matchesSearch = !debouncedSearchTerm || haystack.includes(debouncedSearchTerm)
+      return matchesCourse && matchesSearch
+    })
+  }, [books, coursesById, debouncedSearchTerm, selectedCourseId])
 
-    try {
-      const token = form.token.trim()
-      if (token) {
-        localStorage.setItem('ocw_access_token', token)
-      }
-
-      let filePayload = {}
-      if (form.file) {
-        const uploaded = await uploadFile({
-          file: form.file,
-          folder: `courses/${form.course_id}/books`,
-          token,
-        })
-        filePayload = {
-          file_url: uploaded.local_url || uploaded.public_url || uploaded.file_url || uploaded.url,
-          file_size: form.file.size,
-          mime_type: form.file.type || null,
-        }
-      }
-
-      const created = await sendJson('/course-resources', {
-        token,
-        body: {
-          course_id: Number(form.course_id),
-          title: form.title.trim(),
-          resource_type: 'BOOK',
-          description: form.description.trim() || null,
-          external_url: form.external_url.trim() || null,
-          display_order: form.display_order ? Number(form.display_order) : 0,
-          is_active: true,
-          ...filePayload,
-        },
-      })
-
-      setResources((current) => [...current, created])
-      setForm((current) => ({
-        ...initialForm,
-        course_id: current.course_id,
-        token,
-      }))
-      event.currentTarget.reset()
-      setSuccess('Book added successfully.')
-    } catch (saveError) {
-      setError(saveError.message || 'Unable to add book.')
-    } finally {
-      setSaving(false)
-    }
+  const clearFilters = () => {
+    setSelectedCourseId('')
+    setSearchTerm('')
   }
 
   return (
     <div className="course-page books-page">
-      <section className="course-title-band">
-        <div className="container">
-          <h2>Books</h2>
-          <div className="breadcrumb-line">
-            <Link to="/">Home</Link>
-            <span>/</span>
-            <span>Books</span>
+      <header className="course-hero-strip">
+        <div className="container course-hero-inner">
+          <div className="course-hero-copy">
+            <nav className="breadcrumb-line" aria-label="Breadcrumb">
+              <Link to="/">Home</Link>
+              <span aria-hidden="true">/</span>
+              <span>Books</span>
+            </nav>
+            <h2>Explore books</h2>
+            <p>Course books and reading resources from UET Lahore</p>
           </div>
+
+          <form className="course-toolbar" role="search" onSubmit={(event) => event.preventDefault()}>
+            <label className="visually-hidden" htmlFor="book-search">Search books</label>
+            <input
+              id="book-search"
+              type="search"
+              value={searchTerm}
+              onChange={(event) => setSearchTerm(event.target.value)}
+              placeholder="Search by book or course"
+            />
+            <select
+              aria-label="Course"
+              value={selectedCourseId}
+              onChange={(event) => setSelectedCourseId(event.target.value)}
+            >
+              <option value="">All courses</option>
+              {courses.map((course) => (
+                <option key={course.id} value={course.id}>
+                  {formatCourseTitle(course)}
+                </option>
+              ))}
+            </select>
+          </form>
         </div>
-      </section>
+      </header>
 
-      <div className="container page-block">
-        <section className="content-panel books-hero-panel">
-          <div>
-            <p className="eyebrow">Book library</p>
-            <h2>Add and browse course books only</h2>
-            <p>
-              This module stores books as course resources with the fixed type BOOK, keeping them
-              separate from lectures, files and other course materials.
-            </p>
-          </div>
-          <span>{books.length} books</span>
-        </section>
-
+      <main className="container page-block course-results-wrap">
         {error && <div className="alert-box">{error}</div>}
-        {success && <div className="success-box">{success}</div>}
 
         {loading ? (
-          <div className="loading-box">Loading books...</div>
+          <section className="course-grid" aria-label="Loading books">
+            {[1, 2, 3].map((item) => (
+              <article key={item} className="course-card skeleton-card" aria-hidden="true">
+                <div className="skeleton-media" />
+                <div className="course-card-body">
+                  <span className="skeleton-line wide" />
+                  <span className="skeleton-line" />
+                  <span className="skeleton-line short" />
+                </div>
+              </article>
+            ))}
+          </section>
         ) : (
-          <div className="books-layout">
-            <section className="content-panel resource-manager">
-              <div className="manager-heading">
-                <div>
-                  <p className="eyebrow">Add book</p>
-                  <h3>Book details</h3>
-                </div>
-                <span>BOOK only</span>
+          <>
+            <section className="course-results-bar" aria-label="Book filters and result count">
+              <div className="course-type-pills" role="list" aria-label="Book quick filters">
+                <button
+                  type="button"
+                  className={!selectedCourseId ? 'course-pill active' : 'course-pill'}
+                  aria-pressed={!selectedCourseId}
+                  onClick={() => setSelectedCourseId('')}
+                >
+                  All Books
+                </button>
+                <button
+                  type="button"
+                  className={selectedCourseId ? 'course-pill active' : 'course-pill'}
+                  aria-pressed={Boolean(selectedCourseId)}
+                  onClick={() => {
+                    if (!selectedCourseId && courses[0]) setSelectedCourseId(String(courses[0].id))
+                  }}
+                >
+                  By Course
+                </button>
               </div>
-
-              <form className="resource-form book-form" onSubmit={handleSubmit}>
-                <label className="field-label">
-                  Course
-                  <select
-                    value={form.course_id}
-                    required
-                    onChange={(event) => setForm({ ...form, course_id: event.target.value })}
-                  >
-                    {courses.map((course) => (
-                      <option key={course.id} value={course.id}>
-                        {formatCourseTitle(course)}
-                      </option>
-                    ))}
-                  </select>
-                </label>
-
-                <label className="field-label">
-                  Book title
-                  <input
-                    value={form.title}
-                    required
-                    onChange={(event) => setForm({ ...form, title: event.target.value })}
-                    placeholder="Book name"
-                  />
-                </label>
-
-                <label className="field-label">
-                  Display order
-                  <input
-                    min="0"
-                    type="number"
-                    value={form.display_order}
-                    onChange={(event) => setForm({ ...form, display_order: event.target.value })}
-                    placeholder="0"
-                  />
-                </label>
-
-                <label className="field-label wide">
-                  Description
-                  <textarea
-                    rows="3"
-                    value={form.description}
-                    onChange={(event) => setForm({ ...form, description: event.target.value })}
-                    placeholder="Short note about the book"
-                  />
-                </label>
-
-                <label className="field-label">
-                  Book file
-                  <input
-                    type="file"
-                    accept=".pdf,.doc,.docx,.epub,.ppt,.pptx"
-                    onChange={(event) => setForm({ ...form, file: event.target.files?.[0] || null })}
-                  />
-                </label>
-
-                <label className="field-label">
-                  External link
-                  <input
-                    type="url"
-                    value={form.external_url}
-                    onChange={(event) => setForm({ ...form, external_url: event.target.value })}
-                    placeholder="https://..."
-                  />
-                </label>
-
-                <label className="field-label">
-                  Access token
-                  <input
-                    value={form.token}
-                    onChange={(event) => setForm({ ...form, token: event.target.value })}
-                    placeholder="Optional if already logged in"
-                  />
-                </label>
-
-                <div className="form-actions">
-                  <button className="primary-button small" type="submit" disabled={saving || !courses.length}>
-                    {saving ? 'Adding book...' : 'Add book'}
-                  </button>
-                </div>
-              </form>
+              <p className="course-result-count" aria-live="polite">
+                {filteredBooks.length} {filteredBooks.length === 1 ? 'book' : 'books'}
+              </p>
             </section>
 
-            <section className="content-panel resource-manager">
-              <div className="manager-heading">
-                <div>
-                  <p className="eyebrow">Available books</p>
-                  <h3>Book resources</h3>
-                </div>
-                <span>{books.length} items</span>
-              </div>
+            {filteredBooks.length ? (
+              <section className="course-grid" aria-label="Books">
+                {filteredBooks.map((book) => {
+                  const course = book.course || coursesById[String(book.course_id)] || null
+                  return (
+                    <article key={book.id} className="course-card book-card">
+                      <div className="course-card-link">
+                        <div className="course-card-media-wrap">
+                          <TitleImageFallback
+                            className="course-card-media"
+                            title={book.title || 'Course Book'}
+                            label="Book"
+                          />
+                          <span className="course-type-badge">BOOK</span>
+                        </div>
 
-              <div className="resource-table">
-                {books.length ? (
-                  books.map((book) => (
-                    <article key={book.id} className="managed-resource-row book-row">
-                      <div>
-                        <strong>{book.title}</strong>
-                        <span>{book.course?.title || 'Course not specified'}</span>
-                        {book.description && <span>{book.description}</span>}
-                      </div>
-                      <div className="resource-links">
-                        {book.file_url && (
-                          <>
-                            <a href={fileUrl(book.file_url)} target="_blank" rel="noreferrer">View</a>
-                            <a href={fileUrl(book.file_url)} download={fileNameFromUrl(book.file_url, book.title)}>
-                              Download
-                            </a>
-                          </>
-                        )}
-                        {book.external_url && <a href={fileUrl(book.external_url)} target="_blank" rel="noreferrer">Link</a>}
+                        <div className="course-card-body">
+                          <h3>{book.title || 'Untitled book'}</h3>
+                          <div className="teacher-strip compact">
+                            <span className="teacher-avatar">{initials(course?.title || book.title)}</span>
+                            <span>{course ? formatCourseTitle(course) : 'Course not specified'}</span>
+                          </div>
+                          <p className={book.description ? 'course-card-description' : 'course-card-description empty'}>
+                            {book.description || 'Book details are available in the course reading catalog.'}
+                          </p>
+                        </div>
+
+                        <footer className="course-card-footer">
+                          <div className="course-card-meta" aria-label="Book facts">
+                            <span>{formatFileSize(book.file_size)}</span>
+                            {book.external_url && <span>External link</span>}
+                          </div>
+                          <div className="book-card-actions">
+                            {book.file_url && (
+                              <>
+                                <a href={fileUrl(book.file_url)} target="_blank" rel="noreferrer">View</a>
+                                <a href={fileUrl(book.file_url)} download={fileNameFromUrl(book.file_url, book.title)}>Download</a>
+                              </>
+                            )}
+                            {book.external_url && <a href={fileUrl(book.external_url)} target="_blank" rel="noreferrer">Link</a>}
+                          </div>
+                        </footer>
                       </div>
                     </article>
-                  ))
-                ) : (
-                  <p className="empty-state">No book resources have been added yet.</p>
-                )}
-              </div>
-            </section>
-          </div>
+                  )
+                })}
+              </section>
+            ) : (
+              <section className="course-empty-state" aria-live="polite">
+                <h3>No books match your search</h3>
+                <p>Try a different keyword or course filter.</p>
+                <button type="button" className="details-button" onClick={clearFilters}>
+                  Clear filters
+                </button>
+              </section>
+            )}
+          </>
         )}
-      </div>
+      </main>
     </div>
   )
 }
@@ -277,4 +218,23 @@ export default function BooksPage() {
 function formatCourseTitle(course) {
   const title = course.title || 'Untitled course'
   return course.course_code ? `${title} - ${course.course_code}` : title
+}
+
+function formatFileSize(size) {
+  const bytes = Number(size)
+  if (!Number.isFinite(bytes) || bytes <= 0) return 'Book resource'
+  if (bytes < 1024) return `${bytes} B`
+  if (bytes < 1024 * 1024) return `${Math.round(bytes / 1024)} KB`
+  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`
+}
+
+function initials(name) {
+  const value = String(name || '').trim()
+  if (!value) return 'BK'
+  return value
+    .split(/\s+/)
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((part) => part[0]?.toUpperCase())
+    .join('')
 }
