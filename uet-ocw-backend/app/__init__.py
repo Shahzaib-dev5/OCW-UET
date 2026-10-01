@@ -144,8 +144,9 @@ def create_app(config_class=Config):
     from app.routes.lectures import lectures_bp
     from app.routes.authors import authors_bp
     from app.routes.research_authors import research_authors_bp
-    from app.routes.internships import internships_bp
-    from app.routes.internship_resources import internship_resources_bp
+    from app.routes.internships import internships_bp, skills_development_bp
+    from app.routes.internship_resources import internship_resources_bp, skills_development_resources_bp
+    from app.routes.invited_talks import invited_talks_bp
     from app.routes.research import research_bp
     from app.routes.menu import menu_bp
     from app.routes.media import media_bp
@@ -167,7 +168,10 @@ def create_app(config_class=Config):
     app.register_blueprint(authors_bp)
     app.register_blueprint(research_authors_bp)
     app.register_blueprint(internships_bp)
+    app.register_blueprint(skills_development_bp)
     app.register_blueprint(internship_resources_bp)
+    app.register_blueprint(skills_development_resources_bp)
+    app.register_blueprint(invited_talks_bp)
     app.register_blueprint(research_bp)
     app.register_blueprint(menu_bp)
     app.register_blueprint(media_bp)
@@ -193,8 +197,9 @@ def _build_openapi_spec(app):
         {"name": "Lectures", "description": "Lecture management APIs"},
         {"name": "Authors", "description": "Research author management APIs"},
         {"name": "Research Paper Authors", "description": "Research paper to author linking APIs"},
-        {"name": "Internships", "description": "Internship management APIs"},
-        {"name": "Internship Resources", "description": "Internship resource upload and management APIs"},
+        {"name": "Skills Development", "description": "Skills development program management APIs"},
+        {"name": "Skills Development Resources", "description": "Skills development resource upload and management APIs"},
+        {"name": "Invited Talks", "description": "Department-based invited talk APIs"},
         {"name": "Research Papers", "description": "Research paper APIs"},
         {"name": "Menu", "description": "Menu management APIs"},
         {"name": "Media", "description": "Media file upload and management APIs"},
@@ -255,6 +260,8 @@ def _build_openapi_spec(app):
                 if (
                     path == "/api/uploads"
                     or path.startswith("/api/internship-resources")
+                    or path.startswith("/api/skills-development-resources")
+                    or path.startswith("/api/invited-talks")
                     or path.startswith("/api/research-papers")
                 ):
                     request_content["multipart/form-data"] = {
@@ -281,7 +288,7 @@ def _build_openapi_spec(app):
         "tags": tags,
         "x-tagGroups": [
             {"name": "Core", "tags": ["Auth", "Roles", "Users", "Menu", "Media"]},
-            {"name": "Academic", "tags": ["Faculties", "Departments", "Courses", "Course Resources", "Lectures", "Authors", "Research Paper Authors", "Internships", "Internship Resources", "Research Papers", "Course Teaching Applications", "Course Enrollments"]},
+            {"name": "Academic", "tags": ["Faculties", "Departments", "Courses", "Course Resources", "Lectures", "Authors", "Research Paper Authors", "Skills Development", "Skills Development Resources", "Invited Talks", "Research Papers", "Course Teaching Applications", "Course Enrollments"]},
         ],
         "paths": paths,
     }
@@ -347,17 +354,17 @@ def _schema_for_route(path):
             "status": {"type": "string", "example": "published"},
             "display_order": {"type": "integer", "example": 1},
         }
-    if '/api/internships' in path:
+    if '/api/internships' in path or ('/api/skills-development' in path and '/api/skills-development-resources' not in path):
         return {
             "department_id": {"type": "integer", "example": 1},
-            "title": {"type": "string", "example": "Summer Internship"},
-            "slug": {"type": "string", "example": "summer-internship"},
-            "description": {"type": "string", "example": "Internship details"},
-            "category": {"type": "string", "example": "industry"},
+            "title": {"type": "string", "example": "AI Skills Bootcamp"},
+            "slug": {"type": "string", "example": "ai-skills-bootcamp"},
+            "description": {"type": "string", "example": "Skills development program details"},
+            "category": {"type": "string", "example": "technical training"},
             "duration": {"type": "string", "example": "8 weeks"},
             "eligibility": {"type": "string", "example": "Final-year students"},
             "application_url": {"type": "string", "example": "https://example.edu/apply"},
-            "thumbnail": {"type": "string", "nullable": True, "example": "/uploads/internships/thumb.jpg"},
+            "thumbnail": {"type": "string", "nullable": True, "example": "/uploads/skills-development/thumb.jpg"},
             "start_date": {"type": "string", "format": "date", "example": "2026-06-01"},
             "end_date": {"type": "string", "format": "date", "example": "2026-07-31"},
             "status": {"type": "string", "example": "open"},
@@ -416,19 +423,33 @@ def _schema_for_route(path):
             "display_order": {"type": "integer", "example": 1},
             "is_active": {"type": "boolean", "example": True},
         }
-    if '/api/internship-resources' in path:
+    if '/api/internship-resources' in path or '/api/skills-development-resources' in path:
         return {
             "internship_id": {"type": "integer", "example": 1},
             "title": {"type": "string", "example": "Guidelines PDF"},
             "resource_type": {"type": "string", "example": "PDF"},
-            "description": {"type": "string", "nullable": True, "example": "Internship application guidelines"},
+            "description": {"type": "string", "nullable": True, "example": "Skills development program guidelines"},
             "file": {"type": "string", "format": "binary"},
-            "file_url": {"type": "string", "nullable": True, "example": "/uploads/internship.pdf"},
+            "file_url": {"type": "string", "nullable": True, "example": "/uploads/skills-development.pdf"},
             "external_url": {"type": "string", "nullable": True, "example": "https://example.com/guidelines"},
             "file_size": {"type": "integer", "nullable": True, "example": 120000},
             "mime_type": {"type": "string", "nullable": True, "example": "application/pdf"},
             "display_order": {"type": "integer", "example": 1},
             "is_active": {"type": "boolean", "example": True},
+        }
+    if '/api/invited-talks' in path:
+        return {
+            "department_id": {"type": "integer", "example": 1},
+            "talk_title": {"type": "string", "example": "AI for Sustainable Engineering"},
+            "event_title": {"type": "string", "example": "UET Research Seminar Series"},
+            "presenter": {"type": "string", "example": "Dr. Sara Ahmed"},
+            "talk_date": {"type": "string", "format": "date", "example": "2026-10-01"},
+            "video_url": {"type": "string", "nullable": True, "example": "https://example.com/talk-video"},
+            "upload_file": {"type": "string", "format": "binary"},
+            "upload_url": {"type": "string", "nullable": True, "example": "/uploads/invited-talks/slides.pdf"},
+            "publication": {"type": "string", "nullable": True, "example": "Published in UET Seminar Proceedings"},
+            "status": {"type": "string", "example": "PUBLISHED"},
+            "display_order": {"type": "integer", "example": 1},
         }
     if '/api/uploads' in path:
         return {
@@ -519,10 +540,12 @@ def _tag_for_path(path):
         return "Authors"
     if "/api/research-authors" in path or "/api/research-paper-authors" in path:
         return "Research Paper Authors"
-    if "/api/internship-resources" in path:
-        return "Internship Resources"
-    if "/api/internships" in path:
-        return "Internships"
+    if "/api/internship-resources" in path or "/api/skills-development-resources" in path:
+        return "Skills Development Resources"
+    if "/api/internships" in path or "/api/skills-development" in path:
+        return "Skills Development"
+    if "/api/invited-talks" in path:
+        return "Invited Talks"
     if "/api/research" in path or "/api/research-papers" in path:
         return "Research Papers"
     if "/api/menu" in path:

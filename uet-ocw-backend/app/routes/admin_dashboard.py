@@ -392,10 +392,11 @@ ADMIN_DASHBOARD_HTML = """
         <button data-tab="faculties">Faculties</button>
         <button data-tab="departments">Departments</button>
         <button data-tab="courses">Courses</button>
-        <button data-tab="internships">Internships</button>
+        <button data-tab="internships">Skills Development</button>
+        <button data-tab="invitedTalks">Invited Talks</button>
         <button data-tab="research">Research Papers</button>
         <button data-tab="resources">Lectures & Resources</button>
-        <button data-tab="internshipResources">Internship Resources</button>
+        <button data-tab="internshipResources">Skills Development Resources</button>
         <button data-tab="teachers">Teacher Approvals</button>
         <button data-tab="students">Student Approvals</button>
       </nav>
@@ -417,7 +418,8 @@ ADMIN_DASHBOARD_HTML = """
             <div class="stat"><span>Faculties</span><strong id="facultyCount">0</strong></div>
             <div class="stat"><span>Departments</span><strong id="departmentCount">0</strong></div>
             <div class="stat"><span>Courses</span><strong id="courseCount">0</strong></div>
-            <div class="stat"><span>Internships</span><strong id="internshipCount">0</strong></div>
+            <div class="stat"><span>Skills Development</span><strong id="internshipCount">0</strong></div>
+            <div class="stat"><span>Invited talks</span><strong id="invitedTalkCount">0</strong></div>
             <div class="stat"><span>Research papers</span><strong id="researchCount">0</strong></div>
             <div class="stat"><span>Teacher requests</span><strong id="teacherCount">0</strong></div>
             <div class="stat"><span>Student requests</span><strong id="studentCount">0</strong></div>
@@ -617,9 +619,9 @@ ADMIN_DASHBOARD_HTML = """
           <div class="grid">
             <form class="panel add-panel" id="internshipForm">
               <div class="panel-head">
-                <h2 id="internshipFormTitle">Add internship</h2>
+                <h2 id="internshipFormTitle">Add skills development program</h2>
                 <div class="actions">
-                  <button class="btn secondary mini" type="button" onclick="resetEntityForm('internshipForm', 'internshipFormTitle', 'Add internship')">Clear</button>
+                  <button class="btn secondary mini" type="button" onclick="resetEntityForm('internshipForm', 'internshipFormTitle', 'Add skills development program')">Clear</button>
                   <button class="btn secondary mini" type="button" onclick="hideAddForm('internshipForm')">Close</button>
                 </div>
               </div>
@@ -640,17 +642,58 @@ ADMIN_DASHBOARD_HTML = """
                 <label>Start date<input name="start_date" type="date" /></label>
                 <label>End date<input name="end_date" type="date" /></label>
                 <label>Thumbnail image<input name="thumbnail_file" type="file" accept="image/*" /></label>
-                <label>Thumbnail URL<input name="thumbnail" placeholder="/uploads/internships/thumbnails/internship.jpg" /></label>
+                <label>Thumbnail URL<input name="thumbnail" placeholder="/uploads/skills-development/thumbnails/program.jpg" /></label>
                 <label class="full">Description<textarea name="description"></textarea></label>
               </div>
-              <div class="actions"><button class="btn" type="submit">Save internship</button></div>
+              <div class="actions"><button class="btn" type="submit">Save skills development program</button></div>
             </form>
             <div class="panel">
               <div class="panel-head">
-                <h2>Internships</h2>
-                <button class="btn" type="button" data-add-form="internshipForm" data-title-id="internshipFormTitle" data-title-text="Add internship" onclick="openAddForm('internshipForm', 'internshipFormTitle', 'Add internship')">Add internship</button>
+                <h2>Skills Development</h2>
+                <button class="btn" type="button" data-add-form="internshipForm" data-title-id="internshipFormTitle" data-title-text="Add skills development program" onclick="openAddForm('internshipForm', 'internshipFormTitle', 'Add skills development program')">Add program</button>
               </div>
               <div class="table-wrap"><table><thead><tr><th>ID</th><th>Image</th><th>Title</th><th>Department</th><th>Status</th><th>Actions</th></tr></thead><tbody id="internshipsBody"></tbody></table></div>
+            </div>
+          </div>
+        </section>
+
+        <section class="section" id="invitedTalks">
+          <div class="grid">
+            <form class="panel add-panel" id="invitedTalkForm" enctype="multipart/form-data">
+              <div class="panel-head">
+                <h2 id="invitedTalkFormTitle">Add invited talk</h2>
+                <div class="actions">
+                  <button class="btn secondary mini" type="button" onclick="resetInvitedTalkForm()">Clear</button>
+                  <button class="btn secondary mini" type="button" onclick="hideAddForm('invitedTalkForm')">Close</button>
+                </div>
+              </div>
+              <div class="form-grid">
+                <label>Department<select name="department_id" data-options="departments" required></select></label>
+                <label>Date<input name="talk_date" type="date" /></label>
+                <label class="full">Talk title<input name="talk_title" required /></label>
+                <label>Event title<input name="event_title" /></label>
+                <label>Presenter<input name="presenter" /></label>
+                <label>Video upload link<input name="video_url" placeholder="https://example.com/video" /></label>
+                <label>Upload box<input name="upload_file" type="file" /></label>
+                <label>Status
+                  <select name="status">
+                    <option value="PUBLISHED">PUBLISHED</option>
+                    <option value="DRAFT">DRAFT</option>
+                    <option value="ARCHIVED">ARCHIVED</option>
+                  </select>
+                </label>
+                <label>Display order<input name="display_order" type="number" value="0" /></label>
+                <label class="full">Publication<textarea name="publication"></textarea></label>
+              </div>
+              <div class="actions"><button class="btn" type="submit">Save invited talk</button></div>
+              <pre id="invitedTalkResult" class="notice"></pre>
+            </form>
+            <div class="panel">
+              <div class="panel-head">
+                <h2>Invited talks</h2>
+                <button class="btn" type="button" data-add-form="invitedTalkForm" data-title-id="invitedTalkFormTitle" data-title-text="Add invited talk" onclick="openAddForm('invitedTalkForm', 'invitedTalkFormTitle', 'Add invited talk')">Add invited talk</button>
+              </div>
+              <div class="table-wrap"><table><thead><tr><th>ID</th><th>Talk title</th><th>Event</th><th>Presenter</th><th>Date</th><th>Department</th><th>Media</th><th>Status</th><th>Actions</th></tr></thead><tbody id="invitedTalksBody"></tbody></table></div>
             </div>
           </div>
         </section>
@@ -803,14 +846,14 @@ ADMIN_DASHBOARD_HTML = """
           <div class="grid">
             <form class="panel add-panel" id="internshipResourceForm" enctype="multipart/form-data">
               <div class="panel-head">
-                <h2 id="internshipResourceFormTitle">Add internship resource</h2>
+                <h2 id="internshipResourceFormTitle">Add skills development resource</h2>
                 <div class="actions">
                   <button class="btn secondary mini" type="button" onclick="resetInternshipResourceForm()">Clear</button>
                   <button class="btn secondary mini" type="button" onclick="hideAddForm('internshipResourceForm')">Close</button>
                 </div>
               </div>
               <div class="form-grid">
-                <label>Internship<select name="internship_id" data-options="internships" required></select></label>
+                <label>Skills development program<select name="internship_id" data-options="internships" required></select></label>
                 <label>Type
                   <select name="resource_type">
                     <option value="PDF">PDF</option>
@@ -828,15 +871,15 @@ ADMIN_DASHBOARD_HTML = """
                 <label>Active<select name="is_active"><option value="true">true</option><option value="false">false</option></select></label>
                 <label class="full">Description<textarea name="description"></textarea></label>
               </div>
-              <div class="actions"><button class="btn" type="submit">Save internship resource</button></div>
+              <div class="actions"><button class="btn" type="submit">Save skills development resource</button></div>
               <pre id="internshipResourceResult" class="notice"></pre>
             </form>
             <div class="panel">
               <div class="panel-head">
-                <h2>Internship resources</h2>
-                <button class="btn" type="button" data-add-form="internshipResourceForm" data-title-id="internshipResourceFormTitle" data-title-text="Add internship resource" onclick="openAddForm('internshipResourceForm', 'internshipResourceFormTitle', 'Add internship resource')">Add resource</button>
+                <h2>Skills development resources</h2>
+                <button class="btn" type="button" data-add-form="internshipResourceForm" data-title-id="internshipResourceFormTitle" data-title-text="Add skills development resource" onclick="openAddForm('internshipResourceForm', 'internshipResourceFormTitle', 'Add skills development resource')">Add resource</button>
               </div>
-              <div class="table-wrap"><table><thead><tr><th>ID</th><th>Internship</th><th>Title</th><th>Type</th><th>File</th><th>Active</th><th>Actions</th></tr></thead><tbody id="internshipResourcesBody"></tbody></table></div>
+              <div class="table-wrap"><table><thead><tr><th>ID</th><th>Program</th><th>Title</th><th>Type</th><th>File</th><th>Active</th><th>Actions</th></tr></thead><tbody id="internshipResourcesBody"></tbody></table></div>
             </div>
           </div>
         </section>
@@ -859,7 +902,7 @@ ADMIN_DASHBOARD_HTML = """
   </div>
 
   <script>
-    const state = { courses: [], lectures: [], courseResources: [], departments: [], faculties: [], internships: [], internshipResources: [], researchPapers: [], teacherApps: [], studentApps: [], users: [], user: null };
+    const state = { courses: [], lectures: [], courseResources: [], departments: [], faculties: [], internships: [], internshipResources: [], invitedTalks: [], researchPapers: [], teacherApps: [], studentApps: [], users: [], user: null };
     const $ = (id) => document.getElementById(id);
     const token = () => localStorage.getItem("ocw_admin_token") || "";
     const adminHeaders = () => {
@@ -897,7 +940,8 @@ ADMIN_DASHBOARD_HTML = """
     $("facultyForm").addEventListener("submit", (event) => submitEntity(event, "/api/faculties", "facultyFormTitle", "Add faculty"));
     $("departmentForm").addEventListener("submit", (event) => submitEntity(event, "/api/departments", "departmentFormTitle", "Add department"));
     $("courseForm").addEventListener("submit", (event) => submitJsonWithThumbnail(event, "/api/courses", "courses/thumbnails", "courseFormTitle", "Add course"));
-    $("internshipForm").addEventListener("submit", (event) => submitJsonWithThumbnail(event, "/api/internships", "internships/thumbnails", "internshipFormTitle", "Add internship"));
+    $("internshipForm").addEventListener("submit", (event) => submitJsonWithThumbnail(event, "/api/skills-development", "skills-development/thumbnails", "internshipFormTitle", "Add skills development program"));
+    $("invitedTalkForm").addEventListener("submit", submitInvitedTalk);
     $("researchForm").addEventListener("submit", submitResearchPaper);
     $("lectureForm").addEventListener("submit", submitLecture);
     $("resourceForm").addEventListener("submit", submitCourseResource);
@@ -925,14 +969,15 @@ ADMIN_DASHBOARD_HTML = """
           window.location.href = "/admin/login";
           return;
         }
-        const [faculties, courses, lectures, courseResources, departments, internships, internshipResources, researchPapers] = await Promise.all([
+        const [faculties, courses, lectures, courseResources, departments, internships, internshipResources, invitedTalks, researchPapers] = await Promise.all([
           api("/api/faculties"),
           api("/api/courses"),
           api("/api/lectures"),
           api("/api/course-resources"),
           api("/api/departments"),
-          api("/api/internships"),
-          api("/api/internship-resources"),
+          api("/api/skills-development"),
+          api("/api/skills-development-resources"),
+          api("/api/invited-talks"),
           api("/api/research-papers"),
         ]);
         state.faculties = faculties.data || [];
@@ -942,6 +987,7 @@ ADMIN_DASHBOARD_HTML = """
         state.departments = departments.data || [];
         state.internships = internships.data || [];
         state.internshipResources = internshipResources.data || [];
+        state.invitedTalks = invitedTalks.data || [];
         state.researchPapers = researchPapers.data || [];
         let partialError = null;
 
@@ -1154,6 +1200,32 @@ ADMIN_DASHBOARD_HTML = """
       }
     }
 
+    async function submitInvitedTalk(event) {
+      event.preventDefault();
+      const form = event.currentTarget;
+      const editId = form.dataset.editId;
+      const body = new FormData(form);
+      const headers = {};
+      if (token()) headers.Authorization = `Bearer ${token()}`;
+
+      try {
+        const response = await fetch(editId ? `/api/invited-talks/${editId}` : "/api/invited-talks", {
+          method: editId ? "PATCH" : "POST",
+          headers,
+          body,
+        });
+        const data = parseResponse(await response.text());
+        if (!response.ok) throw new Error(data.message || response.statusText || "Request failed");
+        resetInvitedTalkForm();
+        $("invitedTalkResult").textContent = "";
+        await loadAll();
+        setNotice("Invited talk saved", true);
+      } catch (error) {
+        $("invitedTalkResult").textContent = error.message;
+        setNotice(error.message, false);
+      }
+    }
+
     async function submitJsonWithThumbnail(event, path, folder, titleId, addTitle) {
       event.preventDefault();
       const form = event.currentTarget;
@@ -1244,7 +1316,7 @@ ADMIN_DASHBOARD_HTML = """
       if (token()) headers.Authorization = `Bearer ${token()}`;
 
       try {
-        const response = await fetch(editId ? `/api/internship-resources/${editId}` : "/api/internship-resources", {
+        const response = await fetch(editId ? `/api/skills-development-resources/${editId}` : "/api/skills-development-resources", {
           method: editId ? "PATCH" : "POST",
           headers,
           body,
@@ -1254,7 +1326,7 @@ ADMIN_DASHBOARD_HTML = """
         resetInternshipResourceForm();
         $("internshipResourceResult").textContent = JSON.stringify(data.data || data, null, 2);
         await loadAll();
-        setNotice("Internship resource saved", true);
+        setNotice("Skills development resource saved", true);
       } catch (error) {
         $("internshipResourceResult").textContent = error.message;
         setNotice(error.message, false);
@@ -1302,6 +1374,7 @@ ADMIN_DASHBOARD_HTML = """
       $("departmentCount").textContent = state.departments.length;
       $("courseCount").textContent = state.courses.length;
       $("internshipCount").textContent = state.internships.length;
+      $("invitedTalkCount").textContent = state.invitedTalks.length;
       $("researchCount").textContent = state.researchPapers.length;
       $("teacherCount").textContent = state.teacherApps.filter((item) => item.status === "PENDING").length;
       $("studentCount").textContent = state.studentApps.filter((item) => item.status === "PENDING").length;
@@ -1366,10 +1439,26 @@ ADMIN_DASHBOARD_HTML = """
           <td>${badge(item.status)}</td>
           <td>
             <button class="btn secondary mini" onclick="editInternship(${item.id})">Edit</button>
-            <button class="btn danger mini" onclick="deleteEntity('/api/internships/${item.id}')">Delete</button>
+            <button class="btn danger mini" onclick="deleteEntity('/api/skills-development/${item.id}')">Delete</button>
           </td>
         </tr>
       `);
+      $("invitedTalksBody").innerHTML = rows(state.invitedTalks, (item) => `
+        <tr>
+          <td>${item.id}</td>
+          <td>${escapeHtml(item.talk_title)}</td>
+          <td>${escapeHtml(item.event_title || "")}</td>
+          <td>${escapeHtml(item.presenter || "")}</td>
+          <td>${item.talk_date || ""}</td>
+          <td>${item.department_id || ""}</td>
+          <td>${invitedTalkLinks(item)}</td>
+          <td>${badge(item.status)}</td>
+          <td>
+            <button class="btn secondary mini" onclick="editInvitedTalk(${item.id})">Edit</button>
+            <button class="btn danger mini" onclick="deleteEntity('/api/invited-talks/${item.id}')">Delete</button>
+          </td>
+        </tr>
+      `, 9);
       $("lecturesBody").innerHTML = rows(state.lectures, (item) => `
         <tr>
           <td>${item.id}</td>
@@ -1421,7 +1510,7 @@ ADMIN_DASHBOARD_HTML = """
           <td>${item.is_active ? "Yes" : "No"}</td>
           <td>
             <button class="btn secondary mini" onclick="editInternshipResource(${item.id})">Edit</button>
-            <button class="btn danger mini" onclick="deleteEntity('/api/internship-resources/${item.id}')">Delete</button>
+            <button class="btn danger mini" onclick="deleteEntity('/api/skills-development-resources/${item.id}')">Delete</button>
           </td>
         </tr>
       `);
@@ -1469,7 +1558,7 @@ ADMIN_DASHBOARD_HTML = """
       });
       document.querySelectorAll('select[data-options="internships"]').forEach((select) => {
         const current = select.value;
-        select.innerHTML = `<option value="">Select internship</option>` + state.internships.map((item) => (
+        select.innerHTML = `<option value="">Select skills development program</option>` + state.internships.map((item) => (
           `<option value="${item.id}">${escapeHtml(item.title)} (${item.id})</option>`
         )).join("");
         select.value = current;
@@ -1549,9 +1638,31 @@ ADMIN_DASHBOARD_HTML = """
         "description",
       ]);
       $("internshipForm").dataset.editId = id;
-      $("internshipFormTitle").textContent = `Edit internship #${id}`;
+      $("internshipFormTitle").textContent = `Edit skills development program #${id}`;
       openTab("internships");
       showAddForm("internshipForm");
+    }
+
+    function editInvitedTalk(id) {
+      const item = state.invitedTalks.find((talk) => talk.id === id);
+      if (!item) return;
+      const form = $("invitedTalkForm");
+      fillForm("invitedTalkForm", item, [
+        "department_id",
+        "talk_date",
+        "talk_title",
+        "event_title",
+        "presenter",
+        "video_url",
+        "status",
+        "display_order",
+        "publication",
+      ]);
+      form.dataset.editId = id;
+      $("invitedTalkFormTitle").textContent = `Edit invited talk #${id}`;
+      $("invitedTalkResult").textContent = item.upload_url ? `Current upload: ${item.upload_url}` : "";
+      openTab("invitedTalks");
+      showAddForm("invitedTalkForm");
     }
 
     function editLecture(id) {
@@ -1619,7 +1730,7 @@ ADMIN_DASHBOARD_HTML = """
       const form = $("internshipResourceForm");
       fillForm("internshipResourceForm", item, ["internship_id", "title", "resource_type", "external_url", "display_order", "is_active", "description"]);
       form.dataset.editId = id;
-      $("internshipResourceFormTitle").textContent = `Edit internship resource #${id}`;
+      $("internshipResourceFormTitle").textContent = `Edit skills development resource #${id}`;
       $("internshipResourceResult").textContent = item.file_url ? `Current file: ${item.file_url}` : "";
       openTab("internshipResources");
       showAddForm("internshipResourceForm");
@@ -1646,10 +1757,20 @@ ADMIN_DASHBOARD_HTML = """
       const form = $("internshipResourceForm");
       form.reset();
       delete form.dataset.editId;
-      $("internshipResourceFormTitle").textContent = "Add internship resource";
+      $("internshipResourceFormTitle").textContent = "Add skills development resource";
       $("internshipResourceResult").textContent = "";
       renderSelects();
       hideAddForm("internshipResourceForm");
+    }
+
+    function resetInvitedTalkForm() {
+      const form = $("invitedTalkForm");
+      form.reset();
+      delete form.dataset.editId;
+      $("invitedTalkFormTitle").textContent = "Add invited talk";
+      $("invitedTalkResult").textContent = "";
+      renderSelects();
+      hideAddForm("invitedTalkForm");
     }
 
     function resetCourseResourceForm() {
@@ -1694,6 +1815,7 @@ ADMIN_DASHBOARD_HTML = """
       if (titleId && $(titleId)) $(titleId).textContent = title;
       if (formId === "resourceForm") $("courseResourceResult").textContent = "";
       if (formId === "researchForm") $("researchResult").textContent = "";
+      if (formId === "invitedTalkForm") $("invitedTalkResult").textContent = "";
       if (formId === "internshipResourceForm") $("internshipResourceResult").textContent = "";
       if (formId === "lectureForm") $("lectureFormTitle").textContent = "Add lecture";
       if (formId === "uploadForm") $("uploadResult").textContent = "";
@@ -1757,6 +1879,14 @@ ADMIN_DASHBOARD_HTML = """
       const href = item.pdf_url || item.paper_url || "";
       if (!href) return "";
       return `<a href="${escapeHtml(href)}" target="_blank" rel="noopener">Open</a>`;
+    }
+
+    function invitedTalkLinks(item) {
+      const links = [
+        item.video_url ? `<a href="${escapeHtml(item.video_url)}" target="_blank" rel="noopener">Video</a>` : "",
+        item.upload_url ? `<a href="${escapeHtml(item.upload_url)}" target="_blank" rel="noopener">Upload</a>` : "",
+      ].filter(Boolean);
+      return links.join(" ");
     }
 
     function normalizePublicationType(value) {

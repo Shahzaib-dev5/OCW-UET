@@ -18,7 +18,13 @@ internship_resources_bp = Blueprint(
     url_prefix="/api/internship-resources"
 )
 
+skills_development_resources_bp = Blueprint(
+    "skills_development_resources",
+    __name__,
+    url_prefix="/api/skills-development-resources"
+)
 
+@skills_development_resources_bp.route("", methods=["GET"])
 @internship_resources_bp.route("", methods=["GET"])
 def get_internship_resources():
     try:
@@ -35,12 +41,13 @@ def get_internship_resources():
     })
 
 
+@skills_development_resources_bp.route("/skills-development/<int:internship_id>", methods=["GET"])
 @internship_resources_bp.route("/internship/<int:internship_id>", methods=["GET"])
 def get_resources_by_internship(internship_id):
     try:
         internship = db.session.get(Internship, internship_id)
         if internship is None:
-            return _error("Internship not found", 404)
+            return _error("Skills development program not found", 404)
 
         resources = db.session.scalars(
             select(InternshipResource)
@@ -57,6 +64,7 @@ def get_resources_by_internship(internship_id):
     })
 
 
+@skills_development_resources_bp.route("/<int:resource_id>", methods=["GET"])
 @internship_resources_bp.route("/<int:resource_id>", methods=["GET"])
 def get_internship_resource(resource_id):
     try:
@@ -66,7 +74,7 @@ def get_internship_resource(resource_id):
         return _error("Database is unavailable. Check your database settings", 503)
 
     if resource is None:
-        return _error("Internship resource not found", 404)
+        return _error("Skills development resource not found", 404)
 
     return jsonify({
         "status": "success",
@@ -74,6 +82,7 @@ def get_internship_resource(resource_id):
     })
 
 
+@skills_development_resources_bp.route("", methods=["POST"])
 @internship_resources_bp.route("", methods=["POST"])
 @require_roles(ADMIN)
 def create_internship_resource():
@@ -96,7 +105,7 @@ def create_internship_resource():
         db.session.commit()
     except IntegrityError:
         db.session.rollback()
-        return _error("The selected internship does not exist or the data is invalid", 400)
+        return _error("The selected skills development program does not exist or the data is invalid", 400)
 
     return jsonify({
         "status": "success",
@@ -104,12 +113,13 @@ def create_internship_resource():
     }), 201
 
 
+@skills_development_resources_bp.route("/<int:resource_id>", methods=["PUT", "PATCH"])
 @internship_resources_bp.route("/<int:resource_id>", methods=["PUT", "PATCH"])
 @require_roles(ADMIN)
 def update_internship_resource(resource_id):
     resource = db.session.get(InternshipResource, resource_id)
     if resource is None:
-        return _error("Internship resource not found", 404)
+        return _error("Skills development resource not found", 404)
 
     payload, uploaded_file, error = _get_payload()
     if error:
@@ -132,7 +142,7 @@ def update_internship_resource(resource_id):
         db.session.commit()
     except IntegrityError:
         db.session.rollback()
-        return _error("The selected internship does not exist or the data is invalid", 400)
+        return _error("The selected skills development program does not exist or the data is invalid", 400)
 
     return jsonify({
         "status": "success",
@@ -140,23 +150,24 @@ def update_internship_resource(resource_id):
     })
 
 
+@skills_development_resources_bp.route("/<int:resource_id>", methods=["DELETE"])
 @internship_resources_bp.route("/<int:resource_id>", methods=["DELETE"])
 @require_roles(ADMIN)
 def delete_internship_resource(resource_id):
     resource = db.session.get(InternshipResource, resource_id)
     if resource is None:
-        return _error("Internship resource not found", 404)
+        return _error("Skills development resource not found", 404)
 
     db.session.delete(resource)
     try:
         db.session.commit()
     except IntegrityError:
         db.session.rollback()
-        return _error("Internship resource cannot be deleted because it is in use", 409)
+        return _error("Skills development resource cannot be deleted because it is in use", 409)
 
     return jsonify({
         "status": "success",
-        "message": "Internship resource deleted successfully"
+        "message": "Skills development resource deleted successfully"
     })
 
 
@@ -223,7 +234,7 @@ def _validated_values(payload, require_required_fields):
         if not isinstance(values["internship_id"], int) or values["internship_id"] <= 0:
             return None, _error("internship_id must be a positive integer or null", 400)
         if db.session.get(Internship, values["internship_id"]) is None:
-            return None, _error("Internship not found", 404)
+            return None, _error("Skills development program not found", 404)
 
     if "title" in values:
         if not isinstance(values["title"], str) or not values["title"].strip():
@@ -271,7 +282,7 @@ def _save_resource_file(uploaded_file, internship_id):
     except ValueError as exc:
         return None, _error(str(exc), 400)
     except OSError:
-        return None, _error("Unable to save uploaded internship resource file", 500)
+        return None, _error("Unable to save uploaded skills development resource file", 500)
 
 
 def _resource_file_values(upload_result):

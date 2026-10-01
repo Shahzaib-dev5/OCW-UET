@@ -5,6 +5,7 @@ from app.models.enrollment import CourseEnrollment, CourseTeachingApplication
 from app.models.faculty import Faculty
 from app.models.internship import Internship
 from app.models.internship_resource import InternshipResource
+from app.models.invited_talk import InvitedTalk
 from app.models.lecture import Lecture
 from app.models.menu import MenuItem
 from app.models.media import MediaFile
@@ -23,6 +24,7 @@ __all__ = [
     "Faculty",
     "Internship",
     "InternshipResource",
+    "InvitedTalk",
     "Lecture",
     "MenuItem",
     "MediaFile",

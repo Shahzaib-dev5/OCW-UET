@@ -16,7 +16,14 @@ internships_bp = Blueprint(
     url_prefix="/api/internships"
 )
 
+skills_development_bp = Blueprint(
+    "skills_development",
+    __name__,
+    url_prefix="/api/skills-development"
+)
 
+
+@skills_development_bp.route("", methods=["GET"])
 @internships_bp.route("", methods=["GET"])
 def get_internships():
     try:
@@ -33,6 +40,7 @@ def get_internships():
     })
 
 
+@skills_development_bp.route("/department/<int:department_id>", methods=["GET"])
 @internships_bp.route("/department/<int:department_id>", methods=["GET"])
 def get_internships_by_department(department_id):
     try:
@@ -56,6 +64,7 @@ def get_internships_by_department(department_id):
     })
 
 
+@skills_development_bp.route("/<int:internship_id>", methods=["GET"])
 @internships_bp.route("/<int:internship_id>", methods=["GET"])
 def get_internship(internship_id):
     try:
@@ -65,7 +74,7 @@ def get_internship(internship_id):
         return _error("Database is unavailable. Check your database settings", 503)
 
     if internship is None:
-        return _error("Internship not found", 404)
+        return _error("Skills development program not found", 404)
 
     return jsonify({
         "status": "success",
@@ -73,6 +82,7 @@ def get_internship(internship_id):
     })
 
 
+@skills_development_bp.route("", methods=["POST"])
 @internships_bp.route("", methods=["POST"])
 @require_roles(ADMIN)
 def create_internship():
@@ -98,12 +108,13 @@ def create_internship():
     }), 201
 
 
+@skills_development_bp.route("/<int:internship_id>", methods=["PUT", "PATCH"])
 @internships_bp.route("/<int:internship_id>", methods=["PUT", "PATCH"])
 @require_roles(ADMIN)
 def update_internship(internship_id):
     internship = db.session.get(Internship, internship_id)
     if internship is None:
-        return _error("Internship not found", 404)
+        return _error("Skills development program not found", 404)
 
     payload, error = _get_payload()
     if error:
@@ -128,23 +139,24 @@ def update_internship(internship_id):
     })
 
 
+@skills_development_bp.route("/<int:internship_id>", methods=["DELETE"])
 @internships_bp.route("/<int:internship_id>", methods=["DELETE"])
 @require_roles(ADMIN)
 def delete_internship(internship_id):
     internship = db.session.get(Internship, internship_id)
     if internship is None:
-        return _error("Internship not found", 404)
+        return _error("Skills development program not found", 404)
 
     db.session.delete(internship)
     try:
         db.session.commit()
     except IntegrityError:
         db.session.rollback()
-        return _error("Internship cannot be deleted because it is in use", 409)
+        return _error("Skills development program cannot be deleted because it is in use", 409)
 
     return jsonify({
         "status": "success",
-        "message": "Internship deleted successfully"
+        "message": "Skills development program deleted successfully"
     })
 
 

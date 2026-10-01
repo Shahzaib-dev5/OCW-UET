@@ -1,0 +1,20 @@
+CREATE TABLE IF NOT EXISTS `invited_talks` (
+  `id` bigint unsigned NOT NULL AUTO_INCREMENT,
+  `department_id` bigint unsigned NOT NULL,
+  `talk_title` varchar(500) NOT NULL,
+  `event_title` varchar(500) DEFAULT NULL,
+  `presenter` varchar(255) DEFAULT NULL,
+  `talk_date` date DEFAULT NULL,
+  `video_url` varchar(1000) DEFAULT NULL,
+  `upload_url` varchar(1000) DEFAULT NULL,
+  `publication` varchar(1000) DEFAULT NULL,
+  `status` enum('DRAFT','PUBLISHED','ARCHIVED') DEFAULT 'PUBLISHED',
+  `display_order` int DEFAULT '0',
+  `created_at` datetime DEFAULT CURRENT_TIMESTAMP,
+  `updated_at` datetime DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id`),
+  KEY `ix_invited_talks_department_id` (`department_id`),
+  KEY `ix_invited_talks_talk_date` (`talk_date`),
+  KEY `ix_invited_talks_status` (`status`),
+  CONSTRAINT `fk_invited_talks_department` FOREIGN KEY (`department_id`) REFERENCES `departments` (`id`) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;

@@ -117,5 +117,12 @@ class Department(db.Model):
         lazy="dynamic",
     )
 
+    invited_talks = db.relationship(
+        "InvitedTalk",
+        back_populates="department",
+        passive_deletes=True,
+        lazy="dynamic",
+    )
+
     def __repr__(self):
         return f"<Department {self.name}>"
