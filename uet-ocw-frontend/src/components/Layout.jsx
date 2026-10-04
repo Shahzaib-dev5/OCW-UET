@@ -1,8 +1,10 @@
+import { useState } from 'react'
 import { NavLink } from 'react-router-dom'
 import uetLogo from '../assets/uet-logo.png'
 
 export default function Layout({ children }) {
   const year = new Date().getFullYear()
+  const [isMenuOpen, setIsMenuOpen] = useState(false)
   const navItems = [
     { to: '/', label: 'Home' },
     { to: '/about', label: 'About' },
@@ -22,12 +24,30 @@ export default function Layout({ children }) {
             <h1>Open Courseware</h1>
           </div>
 
-          <nav className="main-nav" aria-label="Main navigation">
+          <button
+            className="nav-toggle"
+            type="button"
+            aria-controls="main-navigation"
+            aria-expanded={isMenuOpen}
+            aria-label="Toggle navigation menu"
+            onClick={() => setIsMenuOpen((current) => !current)}
+          >
+            <span aria-hidden="true" />
+            <span aria-hidden="true" />
+            <span aria-hidden="true" />
+          </button>
+
+          <nav
+            id="main-navigation"
+            className={isMenuOpen ? 'main-nav open' : 'main-nav'}
+            aria-label="Main navigation"
+          >
             {navItems.map((item) => (
               <NavLink
                 key={item.to}
                 to={item.to}
                 className={({ isActive }) => (isActive ? 'nav-link active' : 'nav-link')}
+                onClick={() => setIsMenuOpen(false)}
               >
                 {item.label}
               </NavLink>
