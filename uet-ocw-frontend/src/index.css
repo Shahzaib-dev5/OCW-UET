@@ -2514,14 +2514,30 @@ p {
   margin: 0;
 }
 
-.course-intro-media img,
 .course-intro-image {
   width: 100%;
   aspect-ratio: 16 / 9;
   object-fit: contain;
-  background: #f2f5f8;
   border: 1px solid #e0e6ee;
   border-radius: 12px;
+}
+
+.course-intro-media img.course-intro-image {
+  background: #f2f5f8;
+}
+
+.course-intro-image.title-image-fallback {
+  min-height: 236px;
+  border-color: #0f86dc;
+  background:
+    linear-gradient(135deg, rgba(15, 134, 220, 0.96), rgba(20, 8, 97, 0.94)),
+    radial-gradient(circle at 18% 20%, rgba(255, 255, 255, 0.24), transparent 34%);
+  color: #ffffff;
+}
+
+.course-intro-image.title-image-fallback strong {
+  color: #ffffff;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.22);
 }
 
 .highlight-table,

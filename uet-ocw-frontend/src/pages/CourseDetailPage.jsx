@@ -182,18 +182,16 @@ export default function CourseDetailPage() {
         <main className="course-detail-content">
           <section id="introduction" className="course-section">
             <h3>Course Introduction</h3>
-            <div className={course.thumbnail ? 'course-intro-grid' : 'course-intro-grid no-media'}>
-              {course.thumbnail && (
-                <figure className="course-intro-media">
-                  <TitleImageFallback
-                    className="course-intro-image"
-                    src={course.thumbnail ? fileUrl(course.thumbnail) : ''}
-                    alt={`${formatCourseTitle(course)} course poster`}
-                    title={formatCourseTitle(course)}
-                    label={courseType}
-                  />
-                </figure>
-              )}
+            <div className="course-intro-grid">
+              <figure className="course-intro-media">
+                <TitleImageFallback
+                  className="course-intro-image"
+                  src={course.thumbnail ? fileUrl(course.thumbnail) : ''}
+                  alt={`${formatCourseTitle(course)} course poster`}
+                  title={formatCourseTitle(course)}
+                  label={courseType}
+                />
+              </figure>
               <div className="about-course">
                 <h4>About The Course</h4>
                 <p>{aboutText}</p>
