@@ -1,9 +1,12 @@
 import { useState } from 'react'
 import { NavLink } from 'react-router-dom'
+import { useAuth } from '../auth/AuthContext'
 import uetLogo from '../assets/uet-logo.png'
 
 export default function Layout({ children }) {
   const year = new Date().getFullYear()
+  const { user, logout, isApprovedInstructor, isInstructorMode, setViewMode, isAdmin } = useAuth()
+  const displayName = user?.full_name || user?.username || user?.email || 'Profile'
   const [isMenuOpen, setIsMenuOpen] = useState(false)
   const navItems = [
     { to: '/', label: 'Home' },
@@ -11,9 +14,15 @@ export default function Layout({ children }) {
     { to: '/courses', label: 'Courses' },
     { to: '/books', label: 'Books' },
     { to: '/skills-development', label: 'Skills Development' },
-    { to: '/invited-talks', label: 'Invited Talks' },
+    { to: '/invited-talks', label: 'Tech Talks' },
     //{ to: '/research', label: 'Research' },
   ]
+
+  const switchViewMode = () => {
+    const nextMode = isInstructorMode ? 'student' : 'instructor'
+    setViewMode(nextMode)
+    setIsMenuOpen(false)
+  }
 
   return (
     <div className="site-shell">
@@ -52,6 +61,34 @@ export default function Layout({ children }) {
                 {item.label}
               </NavLink>
             ))}
+            {isApprovedInstructor && (
+              <button
+                type="button"
+                className={isInstructorMode ? 'nav-mode-toggle instructor' : 'nav-mode-toggle'}
+                aria-pressed={isInstructorMode}
+                onClick={switchViewMode}
+              >
+                <span aria-hidden="true" />
+                {isInstructorMode ? 'Instructor UI' : 'Student UI'}
+              </button>
+            )}
+            {isAdmin && (
+              <NavLink to="/admin" className={({ isActive }) => (isActive ? 'nav-link active' : 'nav-link')} onClick={() => setIsMenuOpen(false)}>
+                Admin
+              </NavLink>
+            )}
+            {user ? (
+              <>
+                <NavLink to="/account" className={({ isActive }) => (isActive ? 'nav-link active' : 'nav-link')} onClick={() => setIsMenuOpen(false)}>
+                  {displayName}
+                </NavLink>
+                <button type="button" className="nav-link nav-button" onClick={() => { logout(); setIsMenuOpen(false) }}>Logout</button>
+              </>
+            ) : (
+              <NavLink to="/login" className={({ isActive }) => (isActive ? 'nav-link active' : 'nav-link')} onClick={() => setIsMenuOpen(false)}>
+                Login
+              </NavLink>
+            )}
           </nav>
         </div>
       </header>
@@ -69,7 +106,7 @@ export default function Layout({ children }) {
               </div>
             </div>
             <p>
-              Explore course material, skills development resources, and invited talks from University of
+              Explore course material, skills development resources, and tech talks from University of
               Engineering and Technology Lahore.
             </p>
           </section>

@@ -8,7 +8,7 @@ from sqlalchemy.exc import IntegrityError, OperationalError
 from app.extensions import db
 from app.models.internship import Internship
 from app.models.internship_resource import InternshipResource, InternshipResourceType
-from app.services.authz import ADMIN, require_roles
+from app.services.authz import ADMIN, can_view_skill_learning, enrollment_status_for, require_roles
 from app.services.file_service import save_uploaded_file
 
 
@@ -294,15 +294,19 @@ def _resource_file_values(upload_result):
 
 
 def _serialize_resource(resource):
+    can_access = can_view_skill_learning(resource.internship_id)
     return {
         "id": resource.id,
         "internship_id": resource.internship_id,
         "internship": _serialize_internship(resource.internship) if resource.internship else None,
         "title": resource.title,
         "resource_type": resource.resource_type.value if resource.resource_type else None,
+        "can_access_materials": can_access,
+        "enrollment": enrollment_status_for("SKILL", resource.internship_id),
         "description": resource.description,
-        "file_url": resource.file_url,
-        "external_url": resource.external_url,
+        "file_url": resource.file_url if can_access else None,
+        "external_url": resource.external_url if can_access else None,
+        "locked": not can_access,
         "file_size": resource.file_size,
         "mime_type": resource.mime_type,
         "display_order": resource.display_order,

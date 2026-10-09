@@ -3,6 +3,7 @@ import os
 from pathlib import Path
 
 from flask import Flask, jsonify, render_template_string, send_from_directory
+from sqlalchemy import or_, select
 
 from config import Config
 from app.extensions import db, migrate, cors, jwt
@@ -64,6 +65,8 @@ def create_app(config_class=Config):
 
     @app.route("/uploads/<path:filename>")
     def uploaded_file(filename):
+        if not _can_serve_upload(filename):
+            return jsonify({"status": "error", "message": "Authentication or approved enrollment is required for this file"}), 403
         upload_root = os.getenv("UPLOAD_FOLDER", str(Path(__file__).resolve().parents[1] / "uploads"))
         guessed_mimetype = mimetypes.guess_type(filename)[0] or "application/octet-stream"
         response = send_from_directory(
@@ -153,6 +156,7 @@ def create_app(config_class=Config):
     from app.routes.uploads import uploads_bp
     from app.routes.course_teaching_applications import course_teaching_applications_bp
     from app.routes.course_enrollments import course_enrollments_bp
+    from app.routes.instructor_applications import instructor_applications_bp
 
     # Register routes
     app.register_blueprint(admin_dashboard_bp)
@@ -178,8 +182,55 @@ def create_app(config_class=Config):
     app.register_blueprint(uploads_bp)
     app.register_blueprint(course_teaching_applications_bp)
     app.register_blueprint(course_enrollments_bp)
+    app.register_blueprint(instructor_applications_bp)
 
     return app
+
+
+def _can_serve_upload(filename):
+    normalized = f"/uploads/{filename}".replace("\\", "/")
+    with db.session.no_autoflush:
+        from app.models.course import Course
+        from app.models.internship import Internship
+        from app.models.internship_resource import InternshipResource
+        from app.models.lecture import Lecture
+        from app.models.resource import CourseResource
+        from app.services.authz import can_view_book_learning, can_view_course_learning, can_view_skill_learning
+
+        course = db.session.scalar(select(Course).where(Course.thumbnail == normalized).limit(1))
+        if course is not None:
+            return True
+        skill = db.session.scalar(select(Internship).where(Internship.thumbnail == normalized).limit(1))
+        if skill is not None:
+            return True
+
+        lecture = db.session.scalar(
+            select(Lecture).where(
+                or_(
+                    Lecture.video_url == normalized,
+                    Lecture.presentation_url == normalized,
+                    Lecture.notes_url == normalized,
+                )
+            ).limit(1)
+        )
+        if lecture is not None:
+            return can_view_course_learning(lecture.course_id)
+
+        course_resource = db.session.scalar(
+            select(CourseResource).where(CourseResource.file_url == normalized).limit(1)
+        )
+        if course_resource is not None:
+            if course_resource.resource_type and course_resource.resource_type.value == "BOOK":
+                return can_view_book_learning(course_resource.id)
+            return can_view_course_learning(course_resource.course_id)
+
+        skill_resource = db.session.scalar(
+            select(InternshipResource).where(InternshipResource.file_url == normalized).limit(1)
+        )
+        if skill_resource is not None:
+            return can_view_skill_learning(skill_resource.internship_id)
+
+    return True
 
 
 def _build_openapi_spec(app):

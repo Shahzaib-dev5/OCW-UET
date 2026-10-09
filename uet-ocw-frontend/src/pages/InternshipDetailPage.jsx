@@ -1,16 +1,19 @@
 import { useEffect, useRef, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
+import { useAuth } from '../auth/AuthContext'
 import TitleImageFallback from '../components/TitleImageFallback'
-import { fetchJson, fileNameFromUrl, fileUrl } from '../data/api'
+import { fetchJson, fileNameFromUrl, fileUrl, sendJson } from '../data/api'
 
 export default function InternshipDetailPage() {
   const { internshipId } = useParams()
+  const { user } = useAuth()
   const [internship, setInternship] = useState(null)
   const [resources, setResources] = useState([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
   const [shareStatus, setShareStatus] = useState('')
   const [selectedResourceType, setSelectedResourceType] = useState('All')
+  const [actionStatus, setActionStatus] = useState('')
   const shareTimerRef = useRef(null)
 
   useEffect(() => {
@@ -76,6 +79,8 @@ export default function InternshipDetailPage() {
     ? resources
     : resources.filter((resource) => displayResourceType(resource.resource_type) === activeResourceType)
   const firstResourceUrl = resourceUrl(resources[0])
+  const canAccessMaterials = resources.some((resource) => resource.can_access_materials) || internship.access_level === 'PUBLIC'
+  const enrollment = resources.find((resource) => resource.enrollment)?.enrollment
 
   const handleShare = async () => {
     const shareData = {
@@ -98,6 +103,19 @@ export default function InternshipDetailPage() {
       setShareStatus('Unable to share')
       if (shareTimerRef.current) window.clearTimeout(shareTimerRef.current)
       shareTimerRef.current = window.setTimeout(() => setShareStatus(''), 1800)
+    }
+  }
+
+  const requestEnrollment = async () => {
+    if (!user) return
+    try {
+      setActionStatus('Sending request...')
+      await sendJson('/course-enrollments/resources', { body: { resource_type: 'SKILL', resource_id: Number(internshipId) } })
+      const resourceData = await fetchJson(`/skills-development-resources/skills-development/${internshipId}`)
+      setResources(resourceData)
+      setActionStatus('Enrollment request submitted.')
+    } catch (requestError) {
+      setActionStatus(requestError.message || 'Unable to request enrollment.')
     }
   }
 
@@ -146,11 +164,18 @@ export default function InternshipDetailPage() {
           <div className="skills-facts-actions">
             {firstResourceUrl ? (
               <a className="course-start-button" href={firstResourceUrl} target="_blank" rel="noreferrer">Start learning</a>
+            ) : !canAccessMaterials && !user ? (
+              <Link className="course-start-button" to={`/login?returnTo=${encodeURIComponent(`/skills-development/${internshipId}`)}`}>Login to Request Enrollment</Link>
+            ) : !canAccessMaterials ? (
+              <button className="course-start-button" type="button" onClick={requestEnrollment} disabled={enrollment?.status === 'PENDING'}>
+                {enrollment?.status === 'PENDING' ? 'Awaiting Admin Approval' : ['REJECTED', 'REVOKED'].includes(enrollment?.status) ? 'Request Enrollment Again' : 'Request Enrollment'}
+              </button>
             ) : (
               <a className="course-start-button" href="#skills-resources">Start learning</a>
             )}
             <button type="button" className="skills-share-button" onClick={handleShare}>Share</button>
             {shareStatus && <p className="share-toast" role="status">{shareStatus}</p>}
+            {actionStatus && <p className="share-toast" role="status">{actionStatus}</p>}
           </div>
         </aside>
 
@@ -180,6 +205,9 @@ export default function InternshipDetailPage() {
             <h2>Resources</h2>
             <span>{formatFileCount(filteredResources.length)}</span>
           </div>
+          {!canAccessMaterials && (
+            <p className="lock-notice">{enrollment?.status === 'PENDING' ? 'Your request is awaiting admin approval.' : enrollment?.review_reason || 'Learning material is locked until your enrollment is approved.'}</p>
+          )}
 
           {resources.length > 5 && (
             <div className="skills-resource-filters" role="list" aria-label="Resource type filters">

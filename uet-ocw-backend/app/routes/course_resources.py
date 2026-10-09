@@ -3,9 +3,9 @@ from sqlalchemy import select
 from sqlalchemy.exc import IntegrityError, OperationalError
 
 from app.extensions import db
-from app.models.course import Course
+from app.models.course import AccessLevel, Course
 from app.models.resource import CourseResource, CourseResourceType
-from app.services.authz import can_manage_course, can_view_course_resources, current_user
+from app.services.authz import can_manage_course, can_view_book_learning, can_view_course_learning, can_view_course_record, can_view_course_resources, current_user, enrollment_status_for
 
 
 course_resources_bp = Blueprint(
@@ -19,12 +19,8 @@ course_resources_bp = Blueprint(
 def get_course_resources():
     try:
         query = select(CourseResource).order_by(CourseResource.display_order, CourseResource.id)
-        from app.services.authz import STUDENT, approved_student_course_ids, role_name
-
-        if current_user() is not None and role_name() == STUDENT:
-            query = query.where(CourseResource.course_id.in_(approved_student_course_ids() or []))
-
         resources = db.session.scalars(query).all()
+        resources = [resource for resource in resources if resource.course and can_view_course_record(resource.course)]
     except OperationalError:
         db.session.rollback()
         return _error("Database is unavailable. Check your database settings", 503)
@@ -41,9 +37,8 @@ def get_resources_by_course(course_id):
         course = db.session.get(Course, course_id)
         if course is None:
             return _error("Course not found", 404)
-        if not can_view_course_resources(course_id):
-            return _error("You must be approved for this course before viewing resources", 403)
-
+        if not can_view_course_record(course):
+            return _error("Course is awaiting admin approval", 404)
         resources = db.session.scalars(
             select(CourseResource)
             .where(CourseResource.course_id == course_id)
@@ -69,7 +64,9 @@ def get_course_resource(resource_id):
 
     if resource is None:
         return _error("Course resource not found", 404)
-    if not can_view_course_resources(resource.course_id):
+    if resource.course and not can_view_course_record(resource.course):
+        return _error("Course resource not found", 404)
+    if resource.resource_type != CourseResourceType.BOOK and not can_view_course_resources(resource.course_id):
         return _error("You must be approved for this course before viewing resources", 403)
 
     return jsonify({
@@ -159,6 +156,7 @@ def delete_course_resource(resource_id):
 
 _COURSE_RESOURCE_FIELDS = {
     "course_id",
+    "access_level",
     "title",
     "resource_type",
     "description",
@@ -214,6 +212,12 @@ def _validated_values(payload, require_required_fields):
         except (TypeError, ValueError):
             allowed = ", ".join(item.value for item in CourseResourceType)
             return None, _error(f"resource_type must be one of: {allowed}", 400)
+    if "access_level" in values and values["access_level"] is not None:
+        try:
+            values["access_level"] = AccessLevel(str(values["access_level"]).upper())
+        except (TypeError, ValueError):
+            allowed = ", ".join(item.value for item in AccessLevel)
+            return None, _error(f"access_level must be one of: {allowed}", 400)
 
     if "file_size" in values and values["file_size"] is not None:
         if not isinstance(values["file_size"], int) or values["file_size"] < 0:
@@ -235,15 +239,21 @@ def _validated_values(payload, require_required_fields):
 
 
 def _serialize_resource(resource):
+    is_book = resource.resource_type == CourseResourceType.BOOK
+    can_access = can_view_book_learning(resource.id) if is_book else can_view_course_learning(resource.course_id)
     return {
         "id": resource.id,
         "course_id": resource.course_id,
         "course": _serialize_course(resource.course) if resource.course else None,
         "title": resource.title,
         "resource_type": resource.resource_type.value if resource.resource_type else None,
+        "access_level": resource.access_level.value if resource.access_level else "PUBLIC",
+        "can_access_materials": can_access,
+        "enrollment": enrollment_status_for("BOOK", resource.id) if is_book else enrollment_status_for("COURSE", resource.course_id),
         "description": resource.description,
-        "file_url": resource.file_url,
-        "external_url": resource.external_url,
+        "file_url": resource.file_url if can_access else None,
+        "external_url": resource.external_url if can_access else None,
+        "locked": not can_access,
         "file_size": resource.file_size,
         "mime_type": resource.mime_type,
         "lecture_number": resource.lecture_number,

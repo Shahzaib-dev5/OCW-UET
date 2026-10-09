@@ -1,7 +1,8 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
+import { useAuth } from '../auth/AuthContext'
 import TitleImageFallback from '../components/TitleImageFallback'
-import { fetchJson, fileNameFromUrl, fileUrl } from '../data/api'
+import { deleteJson, fetchJson, fileNameFromUrl, fileUrl, sendJson, uploadFile } from '../data/api'
 
 const menuItems = [
   { href: '#introduction', label: 'Introduction' },
@@ -14,12 +15,23 @@ const menuItems = [
 
 export default function CourseDetailPage() {
   const { courseId } = useParams()
+  const { user, isInstructorMode } = useAuth()
   const [course, setCourse] = useState(null)
   const [resources, setResources] = useState([])
   const [lectures, setLectures] = useState([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
   const [shareStatus, setShareStatus] = useState('')
+  const [actionStatus, setActionStatus] = useState('')
+  const [resourceForm, setResourceForm] = useState({ title: '', resource_type: 'PDF', description: '', external_url: '' })
+  const [resourceFile, setResourceFile] = useState(null)
+  const [lectureForm, setLectureForm] = useState({ lecture_number: '', title: '', description: '', duration_minutes: '' })
+  const [lectureItems, setLectureItems] = useState([])
+  const [lectureItemDraft, setLectureItemDraft] = useState({ resource_type: 'PDF', external_url: '', file: null })
+  const [lectureFileInputKey, setLectureFileInputKey] = useState(0)
+  const [editingLectureId, setEditingLectureId] = useState(null)
+  const [isLectureFormOpen, setIsLectureFormOpen] = useState(false)
+  const [uploading, setUploading] = useState(false)
   const shareTimerRef = useRef(null)
 
   useEffect(() => {
@@ -28,12 +40,13 @@ export default function CourseDetailPage() {
         setLoading(true)
         setError('')
 
-        const [courseData, resourceData, lectureData] = await Promise.all([
-          fetchJson(`/courses/${courseId}`),
+        const courseData = await fetchJson(`/courses/${courseId}`)
+        const [resourceResult, lectureResult] = await Promise.allSettled([
           fetchJson(`/course-resources/course/${courseId}`),
           fetchJson(`/lectures/course/${courseId}`),
         ])
-
+        const resourceData = resourceResult.status === 'fulfilled' ? resourceResult.value : []
+        const lectureData = lectureResult.status === 'fulfilled' ? lectureResult.value : []
         setCourse(courseData)
         setResources(resourceData)
         setLectures(lectureData)
@@ -61,14 +74,30 @@ export default function CourseDetailPage() {
     [resources, readingResources],
   )
 
+  const resourcesByLectureNumber = useMemo(() => (
+    resources.reduce((grouped, resource) => {
+      if (resource.lecture_number == null) return grouped
+      const key = String(resource.lecture_number)
+      grouped[key] = grouped[key] || []
+      grouped[key].push(resource)
+      return grouped
+    }, {})
+  ), [resources])
+
   if (loading) {
     return <div className="container page-block"><div className="loading-box">Loading course details...</div></div>
   }
 
   if (error) {
+    const loginRequired = /awaiting admin approval|login|required/i.test(error)
     return (
       <div className="container page-block">
         <div className="alert-box">{error}</div>
+        {loginRequired && !user && (
+          <Link to={`/login?returnTo=${encodeURIComponent(`/courses/${courseId}`)}`} className="primary-button small">
+            Login to View Course
+          </Link>
+        )}
         <Link to="/courses" className="primary-button small">Back to courses</Link>
       </div>
     )
@@ -92,6 +121,10 @@ export default function CourseDetailPage() {
   const courseType = getCourseType(course)
   const courseLevel = titleCaseText(course.level || 'Not specified')
   const summary = getCourseSummary(course)
+  const canAccessMaterials = Boolean(course.can_access_materials)
+  const canManageCourse = Boolean(course.can_manage)
+  const enrollment = course.enrollment
+  const scheduleText = String(course.schedule || '').trim()
 
   const handleShare = async () => {
     const shareData = {
@@ -114,6 +147,182 @@ export default function CourseDetailPage() {
       setShareStatus('Unable to share')
       if (shareTimerRef.current) window.clearTimeout(shareTimerRef.current)
       shareTimerRef.current = window.setTimeout(() => setShareStatus(''), 1800)
+    }
+  }
+
+  const requestEnrollment = async () => {
+    if (!user) return
+    try {
+      setActionStatus('Sending request...')
+      await sendJson('/course-enrollments/resources', { body: { resource_type: 'COURSE', resource_id: Number(courseId) } })
+      const refreshed = await fetchJson(`/courses/${courseId}`)
+      setCourse(refreshed)
+      setActionStatus('Enrollment request submitted.')
+    } catch (requestError) {
+      setActionStatus(requestError.message || 'Unable to request enrollment.')
+    }
+  }
+
+  const reloadMaterials = async () => {
+    const [resourceData, lectureData, refreshedCourse] = await Promise.all([
+      fetchJson(`/course-resources/course/${courseId}`),
+      fetchJson(`/lectures/course/${courseId}`),
+      fetchJson(`/courses/${courseId}`),
+    ])
+    setResources(resourceData)
+    setLectures(lectureData)
+    setCourse(refreshedCourse)
+  }
+
+  const submitResource = async (event) => {
+    event.preventDefault()
+    try {
+      setUploading(true)
+      setActionStatus('Uploading resource...')
+      let fileUrlValue = ''
+      let fileSize = null
+      let mimeType = ''
+      if (resourceFile) {
+        const uploaded = await uploadFile({ file: resourceFile, folder: `courses/${courseId}/resources` })
+        fileUrlValue = uploaded.local_url || uploaded.public_url || uploaded.relative_path || ''
+        fileSize = uploaded.size || null
+        mimeType = uploaded.mime_type || ''
+      }
+      await sendJson('/course-resources', {
+        body: {
+          course_id: Number(courseId),
+          title: resourceForm.title,
+          resource_type: resourceForm.resource_type,
+          description: resourceForm.description || null,
+          external_url: resourceForm.external_url || null,
+          file_url: fileUrlValue || null,
+          file_size: fileSize,
+          mime_type: mimeType || null,
+          access_level: course.access_level || 'PUBLIC',
+          is_active: true,
+        },
+      })
+      setResourceForm({ title: '', resource_type: 'PDF', description: '', external_url: '' })
+      setResourceFile(null)
+      await reloadMaterials()
+      setActionStatus('Resource uploaded.')
+    } catch (uploadError) {
+      setActionStatus(uploadError.message || 'Unable to upload resource.')
+    } finally {
+      setUploading(false)
+    }
+  }
+
+  const openAddLectureForm = () => {
+    setEditingLectureId(null)
+    setLectureForm({ lecture_number: '', title: '', description: '', duration_minutes: '' })
+    setLectureItems([])
+    setLectureItemDraft({ resource_type: 'PDF', external_url: '', file: null })
+    setLectureFileInputKey((current) => current + 1)
+    setIsLectureFormOpen(true)
+  }
+
+  const openEditLectureForm = (lecture) => {
+    setEditingLectureId(lecture.id)
+    setLectureForm({
+      lecture_number: String(lecture.lecture_number || ''),
+      title: lecture.title || '',
+      description: lecture.description || '',
+      duration_minutes: lecture.duration_minutes == null ? '' : String(lecture.duration_minutes),
+    })
+    setLectureItems([])
+    setLectureItemDraft({ resource_type: 'PDF', external_url: '', file: null })
+    setLectureFileInputKey((current) => current + 1)
+    setIsLectureFormOpen(true)
+  }
+
+  const closeLectureForm = () => {
+    setIsLectureFormOpen(false)
+    setEditingLectureId(null)
+    setLectureForm({ lecture_number: '', title: '', description: '', duration_minutes: '' })
+    setLectureItems([])
+    setLectureItemDraft({ resource_type: 'PDF', external_url: '', file: null })
+    setLectureFileInputKey((current) => current + 1)
+  }
+
+  const addLectureItem = () => {
+    const externalUrl = lectureItemDraft.external_url.trim()
+    const file = lectureItemDraft.file
+    if (!file && !externalUrl) {
+      setActionStatus('Choose a file or add an external link first.')
+      return
+    }
+
+    setLectureItems((current) => [
+      ...current,
+      {
+        id: `${Date.now()}-${current.length}`,
+        resource_type: lectureItemDraft.resource_type,
+        file,
+        external_url: externalUrl,
+      },
+    ])
+    setLectureItemDraft({ resource_type: lectureItemDraft.resource_type, external_url: '', file: null })
+    setLectureFileInputKey((current) => current + 1)
+  }
+
+  const removeLectureItem = (itemId) => {
+    setLectureItems((current) => current.filter((item) => item.id !== itemId))
+  }
+
+  const submitLecture = async (event) => {
+    event.preventDefault()
+    try {
+      setUploading(true)
+      setActionStatus('Saving lecture...')
+      const lectureNumber = Number(lectureForm.lecture_number)
+      const existingLecture = lectures.find((lecture) => String(lecture.lecture_number) === String(lectureNumber))
+      const targetLectureId = editingLectureId || existingLecture?.id
+      const uploadedItems = await uploadLectureItems(lectureItems, `courses/${courseId}/lectures`)
+      const primaryUrls = targetLectureId ? {} : getPrimaryLectureUrls(uploadedItems)
+
+      await sendJson(targetLectureId ? `/lectures/${targetLectureId}` : '/lectures', {
+        method: targetLectureId ? 'PATCH' : 'POST',
+        body: {
+          course_id: Number(courseId),
+          lecture_number: lectureNumber,
+          title: lectureForm.title,
+          description: lectureForm.description || null,
+          duration_minutes: lectureForm.duration_minutes ? Number(lectureForm.duration_minutes) : null,
+          is_published: true,
+          ...primaryUrls,
+        },
+      })
+
+      await saveLectureResources({
+        courseId,
+        course,
+        lectureNumber,
+        title: lectureForm.title,
+        items: uploadedItems,
+      })
+
+      await reloadMaterials()
+      closeLectureForm()
+      setActionStatus(targetLectureId ? 'Lecture updated.' : 'Lecture saved.')
+    } catch (uploadError) {
+      setActionStatus(uploadError.message || 'Unable to save lecture.')
+    } finally {
+      setUploading(false)
+    }
+  }
+
+  const deleteLecture = async (lecture) => {
+    if (!window.confirm(`Delete lecture ${lecture.lecture_number}?`)) return
+    try {
+      setActionStatus('Deleting lecture...')
+      await deleteJson(`/lectures/${lecture.id}`)
+      const linkedResources = resources.filter((resource) => String(resource.lecture_number) === String(lecture.lecture_number))
+      await Promise.all(linkedResources.map((resource) => deleteJson(`/course-resources/${resource.id}`)))
+      await reloadMaterials()
+      setActionStatus('Lecture deleted.')
+    } catch (deleteError) {
+      setActionStatus(deleteError.message || 'Unable to delete lecture.')
     }
   }
 
@@ -160,12 +369,19 @@ export default function CourseDetailPage() {
             </dl>
 
             <div className="course-quick-actions">
-              <a className="course-start-button" href="#materials">Start learning</a>
+              <EnrollmentAction
+                user={user}
+                enrollment={enrollment}
+                canAccess={canAccessMaterials}
+                loginTo={`/login?returnTo=${encodeURIComponent(`/courses/${courseId}`)}`}
+                onRequest={requestEnrollment}
+              />
               <div className="course-secondary-actions">
                 <a href="#syllabus">Syllabus</a>
                 <button type="button" onClick={handleShare}>Share</button>
               </div>
               {shareStatus && <p className="share-toast" role="status">{shareStatus}</p>}
+              {actionStatus && <p className="share-toast" role="status">{actionStatus}</p>}
             </div>
           </aside>
         </div>
@@ -207,77 +423,357 @@ export default function CourseDetailPage() {
 
           <section id="calendar" className="course-section">
             <h3>Course Calendar</h3>
-            <table className="course-calendar-table">
-              <thead>
-                <tr>
-                  <th>Lecture</th>
-                  <th>Topics</th>
-                </tr>
-              </thead>
-              <tbody>
-                {lectures.length ? (
-                  lectures.map((lecture) => (
-                    <tr key={lecture.id}>
-                      <td>{lecture.lecture_number}</td>
-                      <td>{lecture.title}</td>
-                    </tr>
-                  ))
-                ) : (
+            {scheduleText ? (
+              <p className="section-copy">{scheduleText}</p>
+            ) : (
+              <table className="course-calendar-table">
+                <thead>
                   <tr>
-                    <td colSpan="2">No lectures are available yet.</td>
+                    <th>Lecture</th>
+                    <th>Topics</th>
                   </tr>
-                )}
-              </tbody>
-            </table>
+                </thead>
+                <tbody>
+                  {lectures.length ? (
+                    lectures.map((lecture) => (
+                      <tr key={lecture.id}>
+                        <td>{lecture.lecture_number}</td>
+                        <td>{lecture.title}</td>
+                      </tr>
+                    ))
+                  ) : (
+                    <tr>
+                      <td colSpan="2">Calendar details can be added from the course schedule.</td>
+                    </tr>
+                  )}
+                </tbody>
+              </table>
+            )}
           </section>
 
           <section id="materials" className="course-section">
             <h3>Course Material/Videos</h3>
-            <table className="course-resource-table">
-              <thead>
-                <tr>
-                  <th>Available Resources</th>
-                  <th>Links</th>
-                </tr>
-              </thead>
-              <tbody>
-                {lectures.length ? (
-                  lectures.map((lecture) => (
-                    <tr key={lecture.id}>
-                      <td>
-                        <strong>Lecture {lecture.lecture_number}</strong>
-                        {' - '}
-                        {lecture.title}
-                      </td>
-                      <td>
-                        <LectureLink href={lecture.video_url} label="video" />
-                        <LectureLink href={lecture.presentation_url} label="ppt" />
-                        <LectureLink href={lecture.notes_url} label="pdf" />
-                      </td>
-                    </tr>
-                  ))
-                ) : (
+            {!canAccessMaterials ? (
+              <LockNotice user={user} enrollment={enrollment} />
+            ) : (
+              <table className="course-resource-table">
+                <thead>
                   <tr>
-                    <td colSpan="2">No lecture material is available yet.</td>
+                    <th>
+                      <span className="materials-heading-cell">
+                        Available Resources
+                        {canManageCourse && isInstructorMode && (
+                          <button
+                            type="button"
+                            className="lecture-add-button"
+                            aria-label="Add lecture"
+                            onClick={openAddLectureForm}
+                          >
+                            <PlusIcon />
+                          </button>
+                        )}
+                      </span>
+                    </th>
+                    <th>Links</th>
                   </tr>
-                )}
-              </tbody>
-            </table>
+                </thead>
+                <tbody>
+                  {lectures.length ? (
+                    lectures.map((lecture) => (
+                      <tr key={lecture.id}>
+                        <td>
+                          <span className="lecture-title-cell">
+                            <span>
+                              <strong>Lecture {lecture.lecture_number}</strong>
+                              {' - '}
+                              {lecture.title}
+                            </span>
+                            {canManageCourse && isInstructorMode && (
+                              <button
+                                type="button"
+                                className="lecture-edit-button"
+                                aria-label={`Edit lecture ${lecture.lecture_number}`}
+                                onClick={() => openEditLectureForm(lecture)}
+                              >
+                                <EditIcon />
+                              </button>
+                            )}
+                          </span>
+                        </td>
+                        <td>
+                          {(resourcesByLectureNumber[String(lecture.lecture_number)] || []).length ? (
+                            <LectureResourceLinks resources={resourcesByLectureNumber[String(lecture.lecture_number)] || []} />
+                          ) : (
+                            <>
+                              <LectureLink href={lecture.video_url} label="video" />
+                              <LectureLink href={lecture.presentation_url} label="ppt" />
+                              <LectureLink href={lecture.notes_url} label="pdf" />
+                            </>
+                          )}
+                          {canManageCourse && isInstructorMode && (
+                            <button
+                              type="button"
+                              className="lecture-delete-button"
+                              aria-label={`Delete lecture ${lecture.lecture_number}`}
+                              onClick={() => deleteLecture(lecture)}
+                            >
+                              <TrashIcon />
+                            </button>
+                          )}
+                        </td>
+                      </tr>
+                    ))
+                  ) : (
+                    <tr>
+                      <td colSpan="2">No lecture material is available yet.</td>
+                    </tr>
+                  )}
+                </tbody>
+              </table>
+            )}
           </section>
+
+          {canManageCourse && isInstructorMode && isLectureFormOpen && (
+            <LectureFormDialog
+              editing={Boolean(editingLectureId)}
+              lectureForm={lectureForm}
+              setLectureForm={setLectureForm}
+              lectureItems={lectureItems}
+              lectureItemDraft={lectureItemDraft}
+              lectureFileInputKey={lectureFileInputKey}
+              setLectureItemDraft={setLectureItemDraft}
+              addLectureItem={addLectureItem}
+              removeLectureItem={removeLectureItem}
+              uploading={uploading}
+              onSubmit={submitLecture}
+              onClose={closeLectureForm}
+            />
+          )}
+
+          {canManageCourse && isInstructorMode && (
+            <InstructorMaterialPanel
+              resourceForm={resourceForm}
+              setResourceForm={setResourceForm}
+              setResourceFile={setResourceFile}
+              uploading={uploading}
+              submitResource={submitResource}
+            />
+          )}
 
           <section id="reading" className="course-section">
             <h3>Reading</h3>
-            <ResourceRows resources={readingResources} emptyText="No reading resources are available yet." />
+            {!canAccessMaterials ? (
+              <LockNotice user={user} enrollment={enrollment} />
+            ) : (
+              <ResourceRows resources={readingResources} emptyText="No reading resources are available yet." />
+            )}
           </section>
 
           <section id="online-resources" className="course-section">
             <h3>Online Resources</h3>
-            <ResourceRows resources={onlineResources} emptyText="No online resources are available yet." />
+            {!canAccessMaterials ? (
+              <LockNotice user={user} enrollment={enrollment} />
+            ) : (
+              <ResourceRows resources={onlineResources} emptyText="No online resources are available yet." />
+            )}
           </section>
         </main>
       </div>
     </div>
   )
+}
+
+function InstructorMaterialPanel({
+  resourceForm,
+  setResourceForm,
+  setResourceFile,
+  uploading,
+  submitResource,
+}) {
+  return (
+    <section id="instructor-materials" className="course-section instructor-material-panel">
+      <h3>Instructor Uploads</h3>
+      <div className="instructor-upload-grid resource-only">
+        <form className="instructor-upload-form" onSubmit={submitResource}>
+          <h4>Add resource</h4>
+          <label>
+            Title
+            <input value={resourceForm.title} onChange={(event) => setResourceForm({ ...resourceForm, title: event.target.value })} required />
+          </label>
+          <label>
+            Type
+            <select value={resourceForm.resource_type} onChange={(event) => setResourceForm({ ...resourceForm, resource_type: event.target.value })}>
+              <option value="PDF">PDF</option>
+              <option value="POWERPOINT">PowerPoint</option>
+              <option value="VIDEO">Video</option>
+              <option value="BOOK">Book</option>
+              <option value="DOCUMENT">Document</option>
+              <option value="LINK">Link</option>
+              <option value="OTHER">Other</option>
+            </select>
+          </label>
+          <label className="wide">
+            Description
+            <textarea value={resourceForm.description} onChange={(event) => setResourceForm({ ...resourceForm, description: event.target.value })} />
+          </label>
+          <label>
+            File
+            <input type="file" onChange={(event) => setResourceFile(event.target.files?.[0] || null)} />
+          </label>
+          <label>
+            External link
+            <input value={resourceForm.external_url} onChange={(event) => setResourceForm({ ...resourceForm, external_url: event.target.value })} />
+          </label>
+          <button className="primary-button auth-submit" disabled={uploading}>Upload Resource</button>
+        </form>
+      </div>
+    </section>
+  )
+}
+
+function LectureFormDialog({
+  editing,
+  lectureForm,
+  setLectureForm,
+  lectureItems,
+  lectureItemDraft,
+  lectureFileInputKey,
+  setLectureItemDraft,
+  addLectureItem,
+  removeLectureItem,
+  uploading,
+  onSubmit,
+  onClose,
+}) {
+  return (
+    <div className="lecture-dialog-backdrop" role="presentation" onMouseDown={onClose}>
+      <section
+        className="lecture-dialog"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="lecture-dialog-title"
+        onMouseDown={(event) => event.stopPropagation()}
+      >
+        <div className="lecture-dialog-header">
+          <h3 id="lecture-dialog-title">{editing ? 'Edit lecture' : 'Add lecture'}</h3>
+          <button type="button" className="dialog-close-button" aria-label="Close lecture form" onClick={onClose}>
+            <CloseIcon />
+          </button>
+        </div>
+        <form className="instructor-upload-form lecture-dialog-form" onSubmit={onSubmit}>
+          <label>
+            Lecture number
+            <input type="number" min="1" value={lectureForm.lecture_number} onChange={(event) => setLectureForm({ ...lectureForm, lecture_number: event.target.value })} required />
+          </label>
+          <label>
+            Title
+            <input value={lectureForm.title} onChange={(event) => setLectureForm({ ...lectureForm, title: event.target.value })} required />
+          </label>
+          <label>
+            Duration minutes
+            <input type="number" min="0" value={lectureForm.duration_minutes} onChange={(event) => setLectureForm({ ...lectureForm, duration_minutes: event.target.value })} />
+          </label>
+          <label className="wide">
+            Description
+            <textarea value={lectureForm.description} onChange={(event) => setLectureForm({ ...lectureForm, description: event.target.value })} />
+          </label>
+          <div className="lecture-material-builder">
+            <label>
+              Type
+              <select value={lectureItemDraft.resource_type} onChange={(event) => setLectureItemDraft({ ...lectureItemDraft, resource_type: event.target.value })}>
+                <option value="VIDEO">Video lecture</option>
+                <option value="POWERPOINT">PPT / slides</option>
+                <option value="PDF">PDF</option>
+                <option value="DOCUMENT">Document</option>
+                <option value="LINK">Link</option>
+              </select>
+            </label>
+            <label>
+              Upload
+              <input key={lectureFileInputKey} type="file" onChange={(event) => setLectureItemDraft({ ...lectureItemDraft, file: event.target.files?.[0] || null })} />
+            </label>
+            <label className="wide">
+              External link
+              <input value={lectureItemDraft.external_url} onChange={(event) => setLectureItemDraft({ ...lectureItemDraft, external_url: event.target.value })} placeholder="https://example.com/lecture-resource" />
+            </label>
+            <button type="button" className="secondary-action-button lecture-stack-add" onClick={addLectureItem}>
+              Add to Stack
+            </button>
+          </div>
+          <div className="lecture-stack-list">
+            {lectureItems.length ? (
+              lectureItems.map((item, index) => (
+                <div className="lecture-stack-item" key={item.id}>
+                  <span>{index + 1}</span>
+                  <strong>{formatMaterialType(item.resource_type)}</strong>
+                  <small>{item.file?.name || item.external_url}</small>
+                  <button type="button" aria-label="Remove material" onClick={() => removeLectureItem(item.id)}>
+                    <CloseIcon />
+                  </button>
+                </div>
+              ))
+            ) : (
+              <p>No material added yet.</p>
+            )}
+          </div>
+          <div className="lecture-dialog-actions">
+            <button className="primary-button auth-submit" disabled={uploading}>{uploading ? 'Saving...' : editing ? 'Update Lecture' : 'Save Lecture'}</button>
+            <button type="button" className="secondary-action-button" onClick={onClose}>Cancel</button>
+          </div>
+        </form>
+      </section>
+    </div>
+  )
+}
+
+function PlusIcon() {
+  return (
+    <svg aria-hidden="true" viewBox="0 0 16 16" focusable="false">
+      <path d="M8 3v10M3 8h10" />
+    </svg>
+  )
+}
+
+function EditIcon() {
+  return (
+    <svg aria-hidden="true" viewBox="0 0 16 16" focusable="false">
+      <path d="M3 11.5V13h1.5l7.1-7.1-1.5-1.5L3 11.5zM10.8 3.7l1.5 1.5.7-.7a1.05 1.05 0 0 0-1.5-1.5z" />
+    </svg>
+  )
+}
+
+function CloseIcon() {
+  return (
+    <svg aria-hidden="true" viewBox="0 0 16 16" focusable="false">
+      <path d="M4.5 4.5 11.5 11.5M11.5 4.5 4.5 11.5" />
+    </svg>
+  )
+}
+
+function TrashIcon() {
+  return (
+    <svg aria-hidden="true" viewBox="0 0 16 16" focusable="false">
+      <path d="M3 4.5h10M6 4.5V3h4v1.5M5 6v6.5h6V6M7 7.5v3.5M9 7.5v3.5" />
+    </svg>
+  )
+}
+
+function EnrollmentAction({ user, enrollment, canAccess, loginTo, onRequest }) {
+  if (canAccess) return <a className="course-start-button" href="#materials">Access Content</a>
+  if (!user) return <Link className="course-start-button" to={loginTo}>Login to Request Enrollment</Link>
+  if (enrollment?.status === 'PENDING') return <button className="course-start-button" type="button" disabled>Awaiting Admin Approval</button>
+  if (['REJECTED', 'REVOKED'].includes(enrollment?.status)) return <button className="course-start-button" type="button" onClick={onRequest}>Request Enrollment Again</button>
+  return <button className="course-start-button" type="button" onClick={onRequest}>Request Enrollment</button>
+}
+
+function LockNotice({ user, enrollment }) {
+  const reason = enrollment?.review_reason
+  const text = !user
+    ? 'Login to request enrollment for the learning material.'
+    : enrollment?.status === 'PENDING'
+      ? 'Your enrollment request is awaiting admin approval.'
+      : reason || 'Learning material is locked until your enrollment is approved.'
+  return <p className="lock-notice">{text}</p>
 }
 
 function Icon({ name }) {
@@ -298,6 +794,90 @@ function Icon({ name }) {
 function LectureLink({ href, label }) {
   if (!href) return <span className="muted-resource">{label}</span>
   return <a href={fileUrl(href)} target="_blank" rel="noreferrer">{label}</a>
+}
+
+function LectureResourceLinks({ resources }) {
+  return resources.map((resource) => {
+    const href = resource.file_url || resource.external_url
+    if (!href) return null
+    return (
+      <a key={resource.id} href={fileUrl(href)} target="_blank" rel="noreferrer">
+        {formatResourceLinkLabel(resource)}
+      </a>
+    )
+  })
+}
+
+async function uploadLectureItems(items, folder) {
+  const uploadedItems = []
+  for (const item of items) {
+    if (item.file) {
+      const uploaded = await uploadFile({ file: item.file, folder })
+      const url = uploaded.local_url || uploaded.public_url || uploaded.relative_path || ''
+      if (url) {
+        uploadedItems.push({
+          ...item,
+          file_url: url,
+          file_size: uploaded.size || item.file.size || null,
+          mime_type: uploaded.mime_type || item.file.type || null,
+        })
+      }
+      continue
+    }
+
+    if (item.external_url) uploadedItems.push(item)
+  }
+  return uploadedItems
+}
+
+async function saveLectureResources({ courseId, course, lectureNumber, title, items }) {
+  const resourceRequests = items.map((item, index) => sendJson('/course-resources', {
+    body: {
+      course_id: Number(courseId),
+      title: `${title} - ${item.file?.name || formatMaterialType(item.resource_type)} ${index + 1}`,
+      resource_type: item.resource_type,
+      file_url: item.file_url || null,
+      external_url: item.external_url || null,
+      file_size: item.file_size || null,
+      mime_type: item.mime_type || null,
+      lecture_number: lectureNumber,
+      access_level: course.access_level || 'PUBLIC',
+      is_active: true,
+    },
+  }))
+
+  await Promise.all(resourceRequests)
+}
+
+function getPrimaryLectureUrls(items) {
+  const firstVideo = items.find((item) => item.resource_type === 'VIDEO' && (item.file_url || item.external_url))
+  const firstPresentation = items.find((item) => item.resource_type === 'POWERPOINT' && (item.file_url || item.external_url))
+  const firstPdf = items.find((item) => ['PDF', 'DOCUMENT'].includes(item.resource_type) && (item.file_url || item.external_url))
+
+  return {
+    ...(firstVideo ? { video_url: firstVideo.file_url || firstVideo.external_url } : {}),
+    ...(firstPresentation ? { presentation_url: firstPresentation.file_url || firstPresentation.external_url } : {}),
+    ...(firstPdf ? { notes_url: firstPdf.file_url || firstPdf.external_url } : {}),
+  }
+}
+
+function formatResourceLinkLabel(resource) {
+  const type = String(resource.resource_type || '').toLowerCase()
+  if (type.includes('power')) return 'ppt'
+  if (type.includes('video')) return 'video'
+  if (type.includes('pdf') || type.includes('document') || type.includes('book')) return 'pdf'
+  if (resource.external_url) return 'link'
+  return 'file'
+}
+
+function formatMaterialType(type) {
+  const normalized = String(type || '').toUpperCase()
+  if (normalized === 'POWERPOINT') return 'PPT'
+  if (normalized === 'VIDEO') return 'Video'
+  if (normalized === 'PDF') return 'PDF'
+  if (normalized === 'DOCUMENT') return 'Document'
+  if (normalized === 'LINK') return 'Link'
+  return 'File'
 }
 
 function ResourceRows({ resources, emptyText }) {

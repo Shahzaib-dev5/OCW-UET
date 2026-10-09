@@ -6,14 +6,18 @@ from flask import Blueprint, jsonify, request, url_for
 from app.extensions import db
 from app.models.media import MediaFile
 from app.services.file_service import save_uploaded_file
-from app.services.authz import ADMIN, TEACHER, current_user, require_roles
+from app.services.authz import ADMIN, TEACHER, current_user, is_approved_instructor, role_name
 
 uploads_bp = Blueprint("uploads", __name__, url_prefix="/api")
 
 
 @uploads_bp.route("/uploads", methods=["POST"])
-@require_roles(ADMIN, TEACHER)
 def upload_file():
+    user = current_user()
+    if user is None:
+        return jsonify({"status": "error", "message": "Authentication required. Send Authorization: Bearer <token>"}), 401
+    if role_name(user) != ADMIN and not is_approved_instructor(user):
+        return jsonify({"status": "error", "message": "Only admin or approved instructors can upload files"}), 403
     uploaded = request.files.get("file")
     if uploaded is None:
         return jsonify({"status": "error", "message": "No file uploaded"}), 400
@@ -49,7 +53,6 @@ def upload_file():
     if result.get("drive_error"):
         response["drive_error"] = result["drive_error"]
 
-    user = current_user()
     media_file = MediaFile(
         original_name=uploaded.filename,
         stored_name=result["stored_name"],

@@ -1,6 +1,7 @@
 import enum
 
 from app.extensions import db,BigIntegerUnsigned
+from app.models.course import AccessLevel
 
 
 class CourseResourceType(enum.Enum):
@@ -31,6 +32,13 @@ class CourseResource(db.Model):
             ondelete="CASCADE",
         ),
         nullable=False,
+        index=True,
+    )
+    access_level = db.Column(
+        db.Enum(AccessLevel, name="course_resource_access_level"),
+        nullable=False,
+        default=AccessLevel.PUBLIC,
+        server_default="PUBLIC",
         index=True,
     )
 

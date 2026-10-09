@@ -56,8 +56,7 @@ export default function InternshipPage() {
   }, [departments, selectedFacultyId])
 
   useEffect(() => {
-    if (!selectedFacultyId || !facultyDepartments.length) {
-      setSelectedDepartmentId(null)
+    if (!selectedFacultyId || !selectedDepartmentId) {
       return
     }
 
@@ -121,14 +120,6 @@ export default function InternshipPage() {
           </div>
 
           <form className="course-toolbar" role="search" onSubmit={(event) => event.preventDefault()}>
-            <label className="visually-hidden" htmlFor="skills-search">Search skills development programs</label>
-            <input
-              id="skills-search"
-              type="search"
-              value={searchTerm}
-              onChange={(event) => setSearchTerm(event.target.value)}
-              placeholder="Search by title, category, or duration"
-            />
             <select
               aria-label="Faculty"
               value={selectedFacultyId || ''}
@@ -156,6 +147,14 @@ export default function InternshipPage() {
                 </option>
               ))}
             </select>
+            <label className="visually-hidden" htmlFor="skills-search">Search skills development programs</label>
+            <input
+              id="skills-search"
+              type="search"
+              value={searchTerm}
+              onChange={(event) => setSearchTerm(event.target.value)}
+              placeholder="Search by title, category, or duration"
+            />
           </form>
         </div>
       </header>

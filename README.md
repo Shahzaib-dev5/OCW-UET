@@ -1,6 +1,6 @@
 # UET Open Courseware
 
-UET Open Courseware is a full-stack open courseware platform for managing and publishing academic course content, departments, faculty, research papers, internships, lectures, media, users, roles, and course enrollment workflows.
+UET Open Courseware is a full-stack open courseware platform for managing and publishing academic course content, departments, faculty, research papers, skills development programs, lectures, media, users, roles, and course enrollment workflows.
 
 The project contains a Flask REST API backend and a React/Vite frontend.
 
@@ -15,11 +15,13 @@ opencourseware/
 
 ## Features
 
-- Public OCW pages for courses, departments, research, and internships
+- Public OCW pages for courses, departments, research, and skills development
 - Course detail pages with lectures and downloadable resources
 - Research publication listing and detail pages
-- Internship listing, detail pages, thumbnails, and resource downloads
+- Skills development listing, detail pages, thumbnails, and resource downloads
 - Flask REST API with JWT authentication
+- Student email/password signup, Google sign-in, password reset tokens, enrollment requests, and instructor applications
+- Public/restricted access controls for courses, course books, and skills development resources
 - Role, permission, user, menu, media, faculty, department, course, lecture, author, and upload APIs
 - MySQL database support through SQLAlchemy and Flask-Migrate
 - Built-in API health endpoint and OpenAPI/Swagger documentation
@@ -93,6 +95,28 @@ Additional SQL update scripts are available in:
 ```text
 uet-ocw-backend/sql/
 ```
+
+Apply the student authentication and enrollment migration on an existing MySQL database with:
+
+```bash
+mysql -u <user> -p <database> < uet-ocw-backend/sql/2026_10_07_student_auth_enrollment_instructors.sql
+```
+
+Existing content is preserved and defaults to `PUBLIC` unless an admin later changes a course, book resource, or skills development program to `RESTRICTED`.
+
+## Google OAuth
+
+Create a Google OAuth web client in Google Cloud Console, add your frontend origin to the authorized JavaScript origins, then set:
+
+```env
+# backend .env
+GOOGLE_CLIENT_ID=your-google-web-client-id.apps.googleusercontent.com
+
+# frontend .env
+VITE_GOOGLE_CLIENT_ID=your-google-web-client-id.apps.googleusercontent.com
+```
+
+The frontend sends the Google ID token to `/api/auth/google`; the backend verifies the token, requires a verified Google email, links only matching verified accounts, and creates new users as students.
 
 ## Git Notes
 

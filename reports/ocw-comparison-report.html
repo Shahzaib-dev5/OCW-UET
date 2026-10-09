@@ -1,0 +1,799 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>UET Open Courseware Comparative Visibility Report</title>
+  <style>
+    :root {
+      --navy: #140861;
+      --blue: #0f86dc;
+      --gold: #f5ad00;
+      --ink: #172033;
+      --muted: #667085;
+      --line: #d9dde7;
+      --soft: #f4f7fb;
+      --green: #178a57;
+      --red: #b54708;
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      background: #ffffff;
+      color: var(--ink);
+      font-family: "Segoe UI", Arial, sans-serif;
+      font-size: 14px;
+      line-height: 1.55;
+    }
+
+    @page {
+      size: A4;
+      margin: 16mm 13mm;
+    }
+
+    h1, h2, h3, p { margin-top: 0; }
+
+    h1 {
+      color: #ffffff;
+      font-size: 34px;
+      line-height: 1.1;
+      margin-bottom: 14px;
+      max-width: 760px;
+    }
+
+    h2 {
+      color: var(--navy);
+      font-size: 22px;
+      line-height: 1.2;
+      margin: 0 0 14px;
+      padding-bottom: 8px;
+      border-bottom: 2px solid var(--gold);
+    }
+
+    h3 {
+      color: var(--navy);
+      font-size: 16px;
+      line-height: 1.25;
+      margin: 0 0 8px;
+    }
+
+    p { margin-bottom: 10px; }
+
+    a {
+      color: var(--blue);
+      text-decoration: none;
+    }
+
+    .cover {
+      min-height: 250mm;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      background:
+        linear-gradient(135deg, rgba(20, 8, 97, 0.96), rgba(15, 134, 220, 0.88)),
+        linear-gradient(45deg, var(--navy), var(--blue));
+      color: #ffffff;
+      padding: 34px;
+      page-break-after: always;
+    }
+
+    .cover-tag {
+      display: inline-block;
+      border: 1px solid rgba(255, 255, 255, 0.38);
+      border-radius: 999px;
+      padding: 6px 12px;
+      font-size: 11px;
+      font-weight: 800;
+      letter-spacing: 0.09em;
+      text-transform: uppercase;
+    }
+
+    .cover-subtitle {
+      color: rgba(255, 255, 255, 0.88);
+      font-size: 18px;
+      max-width: 680px;
+    }
+
+    .cover-meta {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 14px;
+      margin-top: 28px;
+    }
+
+    .cover-meta div {
+      border-top: 1px solid rgba(255, 255, 255, 0.35);
+      padding-top: 10px;
+    }
+
+    .cover-meta strong {
+      display: block;
+      font-size: 12px;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+    }
+
+    .cover-meta span {
+      display: block;
+      color: rgba(255, 255, 255, 0.82);
+      margin-top: 4px;
+    }
+
+    .section {
+      page-break-inside: avoid;
+      margin-bottom: 22px;
+    }
+
+    .page-break {
+      page-break-before: always;
+    }
+
+    .summary-grid {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 12px;
+    }
+
+    .card {
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: #ffffff;
+      padding: 14px;
+      page-break-inside: avoid;
+    }
+
+    .card.good { border-left: 5px solid var(--green); }
+    .card.warn { border-left: 5px solid var(--gold); }
+    .card.gap { border-left: 5px solid var(--red); }
+
+    .metric-grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 10px;
+      margin: 12px 0 18px;
+    }
+
+    .metric {
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      padding: 12px;
+      background: var(--soft);
+    }
+
+    .metric strong {
+      display: block;
+      color: var(--navy);
+      font-size: 24px;
+      line-height: 1;
+    }
+
+    .metric span {
+      color: var(--muted);
+      display: block;
+      font-size: 12px;
+      margin-top: 6px;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin: 10px 0 18px;
+      page-break-inside: avoid;
+    }
+
+    th, td {
+      border: 1px solid var(--line);
+      padding: 8px;
+      text-align: left;
+      vertical-align: top;
+    }
+
+    th {
+      background: var(--navy);
+      color: #ffffff;
+      font-size: 12px;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+    }
+
+    tbody tr:nth-child(even) td {
+      background: #fbfcfe;
+    }
+
+    .tag {
+      display: inline-block;
+      border-radius: 999px;
+      background: #eef6fd;
+      color: #0f5f9b;
+      font-size: 11px;
+      font-weight: 700;
+      padding: 3px 8px;
+      margin: 0 4px 4px 0;
+      white-space: nowrap;
+    }
+
+    .note {
+      border-left: 4px solid var(--blue);
+      background: #f2f8fd;
+      color: #26384f;
+      padding: 12px 14px;
+      margin: 10px 0 16px;
+    }
+
+    .chart-card {
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      padding: 12px;
+      background: #ffffff;
+      margin-bottom: 18px;
+      page-break-inside: avoid;
+    }
+
+    .chart-title {
+      color: var(--navy);
+      font-weight: 800;
+      margin-bottom: 10px;
+    }
+
+    .bar-label {
+      font-size: 12px;
+      fill: #344054;
+      font-weight: 600;
+    }
+
+    .axis-label {
+      font-size: 10px;
+      fill: #667085;
+    }
+
+    .small {
+      color: var(--muted);
+      font-size: 12px;
+    }
+
+    ul, ol {
+      padding-left: 19px;
+      margin-top: 0;
+    }
+
+    li { margin-bottom: 6px; }
+
+    .sources li {
+      font-size: 12px;
+      overflow-wrap: anywhere;
+    }
+  </style>
+</head>
+<body>
+  <section class="cover">
+    <div>
+      <span class="cover-tag">Comparative OCW Visibility Report</span>
+      <h1>UET Open Courseware: Positioning, Differentiators, and HEC Pakistan Visibility Plan</h1>
+      <p class="cover-subtitle">
+        A comparative analysis of the current UET OCW platform against Pakistani platforms such as
+        Virtual University OCW, NUST, FAST-NUCES, and international OCW leaders including MIT
+        OpenCourseWare, OpenLearn, NPTEL, and Open Yale Courses.
+      </p>
+      <div class="cover-meta">
+        <div>
+          <strong>Prepared For</strong>
+          <span>UET Open Courseware Project</span>
+        </div>
+        <div>
+          <strong>Date</strong>
+          <span>October 5, 2026</span>
+        </div>
+        <div>
+          <strong>Method</strong>
+          <span>Repository review + public web comparison</span>
+        </div>
+      </div>
+    </div>
+    <p class="small" style="color: rgba(255,255,255,0.8);">
+      Note: comparative scores are analytical maturity estimates based on public evidence and the local
+      repository. They are not official rankings from HEC or any university.
+    </p>
+  </section>
+
+  <section class="section">
+    <h2>Executive Summary</h2>
+    <div class="summary-grid">
+      <div class="card good">
+        <h3>What Is Unique In This UET OCW</h3>
+        <p>
+          The platform is not only a course file listing. It combines courses, departments, faculty,
+          lectures, resources, books, research papers, invited talks, skills development programs,
+          authentication, roles, media uploads, teacher applications, and enrollment workflows in one
+          full-stack system.
+        </p>
+      </div>
+      <div class="card good">
+        <h3>Strong Pakistan Positioning</h3>
+        <p>
+          Compared with typical public course-outline pages, UET OCW can become a broader institutional
+          knowledge portal: academic content, research visibility, industry skills, and public outreach
+          from a single university-branded platform.
+        </p>
+      </div>
+      <div class="card warn">
+        <h3>Main Visibility Gap</h3>
+        <p>
+          International OCW leaders win through scale, consistent metadata, open licensing, permanent
+          URLs, search-engine optimization, accessibility, and content quality processes. These should
+          be formalized before public HEC-facing promotion.
+        </p>
+      </div>
+      <div class="card gap">
+        <h3>Critical Next Step</h3>
+        <p>
+          Add an official open license, course-level outcomes, HEC discipline tags, schema.org metadata,
+          sitemap, quality-review badges, analytics, and a permanent cloud upload strategy. These are
+          the changes most likely to improve discoverability and credibility.
+        </p>
+      </div>
+    </div>
+  </section>
+
+  <section class="section">
+    <h2>Repository Evidence: Current UET OCW Capabilities</h2>
+    <div class="metric-grid">
+      <div class="metric"><strong>16</strong><span>backend model files reviewed</span></div>
+      <div class="metric"><strong>21</strong><span>backend route modules</span></div>
+      <div class="metric"><strong>9+</strong><span>public frontend content pages</span></div>
+      <div class="metric"><strong>Full</strong><span>React + Flask + MySQL stack</span></div>
+    </div>
+    <table>
+      <thead>
+        <tr>
+          <th>Area</th>
+          <th>Evidence In This OCW</th>
+          <th>Why It Matters</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>Academic course publishing</td>
+          <td>Courses, lectures, course resources, course detail pages, downloadable materials.</td>
+          <td>Forms the basic OCW promise: structured learning resources available publicly.</td>
+        </tr>
+        <tr>
+          <td>Institution hierarchy</td>
+          <td>Faculties and departments are first-class backend entities with public filtering.</td>
+          <td>Useful for HEC, university reporting, discipline discovery, and faculty ownership.</td>
+        </tr>
+        <tr>
+          <td>Research visibility</td>
+          <td>Research papers, authors, publication metadata, paper detail pages.</td>
+          <td>Turns OCW from only teaching content into a public scholarship window.</td>
+        </tr>
+        <tr>
+          <td>Skills development</td>
+          <td>Skills/internship program pages with resources and thumbnails.</td>
+          <td>Supports employability and national skills-development narratives.</td>
+        </tr>
+        <tr>
+          <td>Public knowledge events</td>
+          <td>Invited talks listing/detail pages with department filters.</td>
+          <td>Captures seminars, lectures, and academic outreach normally lost after events.</td>
+        </tr>
+        <tr>
+          <td>Administration</td>
+          <td>JWT authentication, users, roles, menus, media, upload APIs, admin and teacher dashboards.</td>
+          <td>Allows sustainable content governance rather than static one-time publishing.</td>
+        </tr>
+        <tr>
+          <td>Modern deployment path</td>
+          <td>Vite frontend, Flask API, OpenAPI/Swagger, MySQL, Vercel/Render roadmap.</td>
+          <td>Can be deployed as a low-cost public portal with documented operational steps.</td>
+        </tr>
+      </tbody>
+    </table>
+  </section>
+
+  <section class="section page-break">
+    <h2>Comparison With Pakistani Institutions</h2>
+    <table>
+      <thead>
+        <tr>
+          <th>Institution / Platform</th>
+          <th>Public OCW Position</th>
+          <th>Strengths</th>
+          <th>Gaps Compared With UET OCW</th>
+          <th>UET Opportunity</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>Virtual University OCW</td>
+          <td>Public OCW portal with open lecture/course access.</td>
+          <td>Large public learning footprint, strong distance-learning identity, mature lecture-video culture.</td>
+          <td>Less focused on one campus's faculty/departments/research identity; OCW is course-content centric.</td>
+          <td>UET can differentiate by mixing engineering courses with research papers, invited talks, and skills programs.</td>
+        </tr>
+        <tr>
+          <td>NUST</td>
+          <td>Strong university digital ecosystem and LMS, but public OCW-style course materials are not the main visible offer.</td>
+          <td>Brand reputation, research ecosystem, authenticated LMS capability, strong institutional web presence.</td>
+          <td>Public visitors generally see programs, news, research, and LMS entry points rather than openly reusable course packets.</td>
+          <td>UET can be more visible by making course resources publicly searchable and HEC/Google friendly.</td>
+        </tr>
+        <tr>
+          <td>FAST-NUCES</td>
+          <td>Public academic information and course outlines are visible, but full OCW resources are not a prominent public platform.</td>
+          <td>Strong computing brand, program catalogs, course outlines, distributed campuses.</td>
+          <td>Course outlines are not the same as lectures, resources, papers, talks, and teaching workflows in a unified OCW.</td>
+          <td>UET can occupy a more complete open-learning position, especially for engineering and applied technology content.</td>
+        </tr>
+        <tr>
+          <td>UET OCW</td>
+          <td>Emerging full-stack open courseware and academic resources platform.</td>
+          <td>Courses, resources, departments, research, talks, skills programs, users/roles, API, admin workflows.</td>
+          <td>Needs scale, public deployment, open licensing, SEO, analytics, accessibility, quality assurance, and permanent media storage.</td>
+          <td>Can become a highly visible Pakistani engineering OCW if governance and metadata are formalized.</td>
+        </tr>
+      </tbody>
+    </table>
+  </section>
+
+  <section class="section">
+    <h2>International Benchmark Comparison</h2>
+    <table>
+      <thead>
+        <tr>
+          <th>Benchmark</th>
+          <th>What They Do Well</th>
+          <th>Lesson For UET OCW</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>MIT OpenCourseWare</td>
+          <td>Massive open catalog, permanent course URLs, consistent course pages, open licensing, strong search visibility.</td>
+          <td>Publish a visible license, stable URLs, course metadata, instructor attribution, and consistent content templates.</td>
+        </tr>
+        <tr>
+          <td>OpenLearn, The Open University</td>
+          <td>Free public courses with structured learning paths, user-friendly course cards, badges/certificates for some learning.</td>
+          <td>Add learning pathways, estimated study time, course outcomes, and completion evidence for skills content.</td>
+        </tr>
+        <tr>
+          <td>NPTEL / SWAYAM</td>
+          <td>Large-scale national course network, IIT/IISc credibility, certification pathway, local chapter model.</td>
+          <td>Create department coordinators and UET local content owners; consider certificate-ready skill modules later.</td>
+        </tr>
+        <tr>
+          <td>Open Yale Courses</td>
+          <td>Prestige lecture archive with syllabus, lecture videos, transcripts, and readings for selected courses.</td>
+          <td>Even a smaller catalog can be credible if each course has complete, polished, durable materials.</td>
+        </tr>
+      </tbody>
+    </table>
+  </section>
+
+  <section class="section page-break">
+    <h2>Feature Matrix</h2>
+    <table>
+      <thead>
+        <tr>
+          <th>Capability</th>
+          <th>UET OCW</th>
+          <th>VU OCW</th>
+          <th>NUST</th>
+          <th>FAST</th>
+          <th>MIT OCW</th>
+          <th>NPTEL</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>Public course pages</td>
+          <td>Strong</td><td>Strong</td><td>Limited public OCW</td><td>Outlines/catalog</td><td>Very strong</td><td>Very strong</td>
+        </tr>
+        <tr>
+          <td>Lecture/resource downloads</td>
+          <td>Strong in architecture</td><td>Strong</td><td>Mostly LMS/private</td><td>Limited public</td><td>Strong</td><td>Strong</td>
+        </tr>
+        <tr>
+          <td>Faculty/department filtering</td>
+          <td>Strong</td><td>Moderate</td><td>Strong institutionally</td><td>Moderate</td><td>Moderate</td><td>Moderate</td>
+        </tr>
+        <tr>
+          <td>Research paper showcase</td>
+          <td>Strong</td><td>Limited OCW focus</td><td>Strong elsewhere</td><td>Strong elsewhere</td><td>Separate ecosystem</td><td>Not primary</td>
+        </tr>
+        <tr>
+          <td>Invited talks/events archive</td>
+          <td>Strong</td><td>Limited OCW focus</td><td>Present elsewhere</td><td>Present elsewhere</td><td>Some</td><td>Some</td>
+        </tr>
+        <tr>
+          <td>Skills / employability content</td>
+          <td>Strong</td><td>Course focused</td><td>Present elsewhere</td><td>Program focused</td><td>Limited</td><td>Strong</td>
+        </tr>
+        <tr>
+          <td>Open license clarity</td>
+          <td>Needs work</td><td>Needs verification</td><td>Not OCW-centric</td><td>Not OCW-centric</td><td>Very strong</td><td>Moderate/varies</td>
+        </tr>
+        <tr>
+          <td>Certificates/badges</td>
+          <td>Not yet</td><td>Not primary OCW</td><td>Not public OCW</td><td>Not public OCW</td><td>No formal MIT credit</td><td>Strong</td>
+        </tr>
+        <tr>
+          <td>Public SEO/discoverability</td>
+          <td>Emerging</td><td>Moderate</td><td>Strong brand, less OCW</td><td>Strong brand, less OCW</td><td>Very strong</td><td>Very strong</td>
+        </tr>
+      </tbody>
+    </table>
+  </section>
+
+  <section class="section">
+    <h2>Charts</h2>
+    <div class="chart-card">
+      <div class="chart-title">Comparative OCW Maturity Score, 0-5</div>
+      <svg viewBox="0 0 760 250" width="100%" height="250" role="img" aria-label="Bar chart comparing OCW maturity">
+        <line x1="155" y1="220" x2="720" y2="220" stroke="#98a2b3" stroke-width="1" />
+        <text x="155" y="238" class="axis-label">0</text>
+        <text x="268" y="238" class="axis-label">1</text>
+        <text x="381" y="238" class="axis-label">2</text>
+        <text x="494" y="238" class="axis-label">3</text>
+        <text x="607" y="238" class="axis-label">4</text>
+        <text x="716" y="238" class="axis-label">5</text>
+        <g>
+          <text x="10" y="28" class="bar-label">MIT OCW</text>
+          <rect x="155" y="12" width="543" height="22" fill="#140861" rx="4" />
+          <text x="706" y="28" class="bar-label">4.8</text>
+        </g>
+        <g>
+          <text x="10" y="63" class="bar-label">NPTEL</text>
+          <rect x="155" y="47" width="509" height="22" fill="#0f86dc" rx="4" />
+          <text x="672" y="63" class="bar-label">4.5</text>
+        </g>
+        <g>
+          <text x="10" y="98" class="bar-label">OpenLearn</text>
+          <rect x="155" y="82" width="486" height="22" fill="#178a57" rx="4" />
+          <text x="649" y="98" class="bar-label">4.3</text>
+        </g>
+        <g>
+          <text x="10" y="133" class="bar-label">VU OCW</text>
+          <rect x="155" y="117" width="384" height="22" fill="#f5ad00" rx="4" />
+          <text x="547" y="133" class="bar-label">3.4</text>
+        </g>
+        <g>
+          <text x="10" y="168" class="bar-label">UET OCW now</text>
+          <rect x="155" y="152" width="350" height="22" fill="#7a5af8" rx="4" />
+          <text x="513" y="168" class="bar-label">3.1</text>
+        </g>
+        <g>
+          <text x="10" y="203" class="bar-label">UET after fixes</text>
+          <rect x="155" y="187" width="452" height="22" fill="#12b76a" rx="4" />
+          <text x="615" y="203" class="bar-label">4.0</text>
+        </g>
+      </svg>
+      <p class="small">
+        Score basis: open catalog, resources, governance, SEO, licensing, accessibility, metadata,
+        quality assurance, scale, and user pathways.
+      </p>
+    </div>
+
+    <div class="chart-card">
+      <div class="chart-title">UET OCW Strength Profile</div>
+      <svg viewBox="0 0 760 290" width="100%" height="290" role="img" aria-label="UET OCW feature strength bars">
+        <line x1="220" y1="258" x2="720" y2="258" stroke="#98a2b3" />
+        <text x="220" y="276" class="axis-label">0</text>
+        <text x="320" y="276" class="axis-label">1</text>
+        <text x="420" y="276" class="axis-label">2</text>
+        <text x="520" y="276" class="axis-label">3</text>
+        <text x="620" y="276" class="axis-label">4</text>
+        <text x="715" y="276" class="axis-label">5</text>
+        <g>
+          <text x="10" y="28" class="bar-label">Courses + lectures</text>
+          <rect x="220" y="12" width="390" height="21" fill="#0f86dc" rx="4" />
+          <text x="620" y="28" class="bar-label">3.9</text>
+        </g>
+        <g>
+          <text x="10" y="64" class="bar-label">Research showcase</text>
+          <rect x="220" y="48" width="410" height="21" fill="#140861" rx="4" />
+          <text x="640" y="64" class="bar-label">4.1</text>
+        </g>
+        <g>
+          <text x="10" y="100" class="bar-label">Skills programs</text>
+          <rect x="220" y="84" width="400" height="21" fill="#178a57" rx="4" />
+          <text x="630" y="100" class="bar-label">4.0</text>
+        </g>
+        <g>
+          <text x="10" y="136" class="bar-label">Admin governance</text>
+          <rect x="220" y="120" width="430" height="21" fill="#7a5af8" rx="4" />
+          <text x="660" y="136" class="bar-label">4.3</text>
+        </g>
+        <g>
+          <text x="10" y="172" class="bar-label">Open license clarity</text>
+          <rect x="220" y="156" width="140" height="21" fill="#b54708" rx="4" />
+          <text x="370" y="172" class="bar-label">1.4</text>
+        </g>
+        <g>
+          <text x="10" y="208" class="bar-label">SEO + metadata</text>
+          <rect x="220" y="192" width="210" height="21" fill="#f5ad00" rx="4" />
+          <text x="440" y="208" class="bar-label">2.1</text>
+        </g>
+        <g>
+          <text x="10" y="244" class="bar-label">Credentials / badges</text>
+          <rect x="220" y="228" width="80" height="21" fill="#d92d20" rx="4" />
+          <text x="310" y="244" class="bar-label">0.8</text>
+        </g>
+      </svg>
+    </div>
+  </section>
+
+  <section class="section page-break">
+    <h2>What Makes UET OCW More Visible To HEC Pakistan</h2>
+    <div class="note">
+      HEC-facing visibility is not only design. It depends on verifiable academic structure, quality
+      assurance, public access, national relevance, sustainable governance, and discoverability.
+    </div>
+    <table>
+      <thead>
+        <tr>
+          <th>Visibility Lever</th>
+          <th>Recommended Implementation</th>
+          <th>Impact</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>HEC-aligned metadata</td>
+          <td>Add discipline, program, level, credit hours, CLOs/PLOs, semester, instructor, department, and resource type to every course.</td>
+          <td>Makes the platform useful for academic review, search, and reporting.</td>
+        </tr>
+        <tr>
+          <td>Quality assurance workflow</td>
+          <td>Add review states such as Draft, Department Reviewed, QEC Reviewed, Published, Archived.</td>
+          <td>Shows governance and reduces risk of stale or low-quality public material.</td>
+        </tr>
+        <tr>
+          <td>Open license</td>
+          <td>Publish a university-approved OER license page, preferably Creative Commons where policy allows.</td>
+          <td>International OCW credibility depends heavily on reuse rights.</td>
+        </tr>
+        <tr>
+          <td>Structured data + SEO</td>
+          <td>Add sitemap.xml, robots.txt, canonical URLs, OpenGraph tags, and schema.org Course markup.</td>
+          <td>Helps Google, HEC reviewers, students, and researchers discover material.</td>
+        </tr>
+        <tr>
+          <td>Analytics dashboard</td>
+          <td>Track page views, downloads, departments, popular courses, geographic reach, and resource usage.</td>
+          <td>Produces evidence for HEC reports, grants, and institutional impact claims.</td>
+        </tr>
+        <tr>
+          <td>Accessibility</td>
+          <td>Target WCAG 2.1 AA: captions, transcripts, keyboard navigation, contrast, alt text, semantic headings.</td>
+          <td>Improves inclusion and institutional maturity.</td>
+        </tr>
+        <tr>
+          <td>National skills link</td>
+          <td>Map skills programs to employability, entrepreneurship, AI/data/cybersecurity/engineering practice themes.</td>
+          <td>Connects OCW to Pakistan's human-capital and digital-skills agenda.</td>
+        </tr>
+        <tr>
+          <td>Institutional backlinks</td>
+          <td>Link OCW from official UET homepage, departments, QEC, ORIC, admissions, and faculty profiles.</td>
+          <td>Raises authority and makes OCW visible as official university infrastructure.</td>
+        </tr>
+      </tbody>
+    </table>
+  </section>
+
+  <section class="section">
+    <h2>Strategic Differentiators To Highlight</h2>
+    <p>
+      UET OCW should not position itself as a smaller copy of MIT OCW. Its stronger message is:
+      <strong>a Pakistani engineering university knowledge platform that connects teaching, research,
+      employability, and academic outreach.</strong>
+    </p>
+    <p>
+      Recommended public tagline: <strong>Open engineering learning, research, and skills resources
+      from UET Lahore.</strong>
+    </p>
+    <div>
+      <span class="tag">Engineering-first OCW</span>
+      <span class="tag">Department-owned content</span>
+      <span class="tag">Research + teaching together</span>
+      <span class="tag">Skills development resources</span>
+      <span class="tag">Invited talks archive</span>
+      <span class="tag">Admin-managed publishing</span>
+      <span class="tag">API-ready platform</span>
+      <span class="tag">Responsive frontend</span>
+    </div>
+  </section>
+
+  <section class="section">
+    <h2>90-Day Action Plan</h2>
+    <table>
+      <thead>
+        <tr>
+          <th>Period</th>
+          <th>Priority Work</th>
+          <th>Deliverable</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>Days 1-15</td>
+          <td>Deploy stable public frontend/backend, fix upload persistence, add sitemap and basic SEO tags.</td>
+          <td>Public beta URL with analytics enabled.</td>
+        </tr>
+        <tr>
+          <td>Days 16-30</td>
+          <td>Add license page, course template, HEC-aligned metadata fields, and resource quality checklist.</td>
+          <td>Official publishing standard for all departments.</td>
+        </tr>
+        <tr>
+          <td>Days 31-60</td>
+          <td>Publish 10-20 flagship courses with complete lectures/resources, 20 research items, and 10 invited talks.</td>
+          <td>Launch-ready public content catalog.</td>
+        </tr>
+        <tr>
+          <td>Days 61-90</td>
+          <td>Department backlink campaign, QEC/ORIC review, accessibility pass, analytics report, HEC-facing brief.</td>
+          <td>Visibility pack for university leadership and HEC-style reporting.</td>
+        </tr>
+      </tbody>
+    </table>
+  </section>
+
+  <section class="section page-break">
+    <h2>Suggested KPIs</h2>
+    <table>
+      <thead>
+        <tr>
+          <th>KPI</th>
+          <th>Target For First Public Quarter</th>
+          <th>Why It Matters</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr><td>Published complete courses</td><td>20</td><td>Enough catalog depth to look institutional, not experimental.</td></tr>
+        <tr><td>Departments represented</td><td>8+</td><td>Shows broad university participation.</td></tr>
+        <tr><td>Resource downloads/views</td><td>Measured monthly</td><td>Evidence of public value.</td></tr>
+        <tr><td>Courses with CLO/PLO metadata</td><td>100% of flagship courses</td><td>Aligns with academic quality expectations.</td></tr>
+        <tr><td>Courses with license and attribution</td><td>100%</td><td>Required for credible open education.</td></tr>
+        <tr><td>Accessibility pass rate</td><td>90%+ key pages</td><td>Supports inclusive public access.</td></tr>
+        <tr><td>Search-indexed course pages</td><td>100% of public courses</td><td>Directly improves visibility.</td></tr>
+      </tbody>
+    </table>
+  </section>
+
+  <section class="section">
+    <h2>Conclusion</h2>
+    <p>
+      UET OCW already has a strong technical base and a wider feature surface than many basic course
+      outline portals. Its unique value is the combination of engineering learning resources,
+      departmental structure, research papers, invited talks, skills development programs, and
+      role-based administration.
+    </p>
+    <p>
+      To become more visible in Pakistan and credible to HEC-style stakeholders, the platform should
+      now move from <em>software capability</em> to <em>institutional publishing discipline</em>:
+      high-quality public content, open licensing, metadata, SEO, accessibility, analytics, and a
+      quality-review process. If these are implemented, UET OCW can stand out as one of Pakistan's
+      more complete university-owned open learning platforms.
+    </p>
+  </section>
+
+  <section class="section">
+    <h2>Sources And Evidence Base</h2>
+    <ul class="sources">
+      <li>Local repository evidence: README.md, frontend React pages, backend Flask route modules, SQLAlchemy models, and deployment roadmap in this workspace.</li>
+      <li>Virtual University OCW: <a href="https://ocw.vu.edu.pk/">https://ocw.vu.edu.pk/</a></li>
+      <li>NUST official website and LMS entry context: <a href="https://nust.edu.pk/">https://nust.edu.pk/</a> and <a href="https://lms.nust.edu.pk/">https://lms.nust.edu.pk/</a></li>
+      <li>FAST-NUCES official website and public academic information: <a href="https://nu.edu.pk/">https://nu.edu.pk/</a></li>
+      <li>MIT OpenCourseWare: <a href="https://ocw.mit.edu/">https://ocw.mit.edu/</a></li>
+      <li>OpenLearn, The Open University: <a href="https://www.open.edu/openlearn/">https://www.open.edu/openlearn/</a></li>
+      <li>NPTEL: <a href="https://nptel.ac.in/">https://nptel.ac.in/</a></li>
+      <li>Open Yale Courses: <a href="https://oyc.yale.edu/">https://oyc.yale.edu/</a></li>
+      <li>HEC Pakistan, official website for context on higher-education quality and digital initiatives: <a href="https://www.hec.gov.pk/">https://www.hec.gov.pk/</a></li>
+    </ul>
+  </section>
+</body>
+</html>

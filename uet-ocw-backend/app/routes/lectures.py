@@ -5,7 +5,7 @@ from sqlalchemy.exc import IntegrityError, OperationalError
 from app.extensions import db
 from app.models.course import Course
 from app.models.lecture import Lecture
-from app.services.authz import can_manage_course, can_view_course_resources, current_user
+from app.services.authz import can_manage_course, can_view_course_learning, can_view_course_record, can_view_course_resources, current_user
 
 
 lectures_bp = Blueprint(
@@ -25,6 +25,7 @@ def get_lectures():
             query = query.where(Lecture.course_id.in_(approved_student_course_ids() or []))
 
         lectures = db.session.scalars(query).all()
+        lectures = [lecture for lecture in lectures if lecture.course and can_view_course_record(lecture.course)]
     except OperationalError:
         db.session.rollback()
         return _error("Database is unavailable. Check your database settings", 503)
@@ -41,9 +42,8 @@ def get_lectures_by_course(course_id):
         course = db.session.get(Course, course_id)
         if course is None:
             return _error("Course not found", 404)
-        if not can_view_course_resources(course_id):
-            return _error("You must be approved for this course before viewing lectures", 403)
-
+        if not can_view_course_record(course):
+            return _error("Course is awaiting admin approval", 404)
         lectures = db.session.scalars(
             select(Lecture)
             .where(Lecture.course_id == course_id)
@@ -68,6 +68,8 @@ def get_lecture(lecture_id):
         return _error("Database is unavailable. Check your database settings", 503)
 
     if lecture is None:
+        return _error("Lecture not found", 404)
+    if lecture.course and not can_view_course_record(lecture.course):
         return _error("Lecture not found", 404)
     if not can_view_course_resources(lecture.course_id):
         return _error("You must be approved for this course before viewing lectures", 403)
@@ -228,6 +230,7 @@ def _validated_values(payload, require_required_fields):
 
 def _serialize_lecture(lecture):
     course = lecture.course
+    can_access = can_view_course_learning(lecture.course_id)
     return {
         "id": lecture.id,
         "course_id": lecture.course_id,
@@ -236,9 +239,10 @@ def _serialize_lecture(lecture):
         "title": lecture.title,
         "description": lecture.description,
         "duration_minutes": lecture.duration_minutes,
-        "video_url": lecture.video_url,
-        "presentation_url": lecture.presentation_url,
-        "notes_url": lecture.notes_url,
+        "video_url": lecture.video_url if can_access else None,
+        "presentation_url": lecture.presentation_url if can_access else None,
+        "notes_url": lecture.notes_url if can_access else None,
+        "locked": not can_access,
         "is_published": lecture.is_published,
         "display_order": lecture.display_order,
         "created_at": lecture.created_at.isoformat() if lecture.created_at else None,

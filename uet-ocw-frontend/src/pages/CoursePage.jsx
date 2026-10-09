@@ -1,9 +1,11 @@
 import { useEffect, useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
 import TitleImageFallback from '../components/TitleImageFallback'
+import { useAuth } from '../auth/AuthContext'
 import { fetchJson, fileUrl } from '../data/api'
 
 export default function CoursePage() {
+  const { isInstructorMode } = useAuth()
   const [faculties, setFaculties] = useState([])
   const [departments, setDepartments] = useState([])
   const [courses, setCourses] = useState([])
@@ -57,8 +59,7 @@ export default function CoursePage() {
   }, [departments, selectedFacultyId])
 
   useEffect(() => {
-    if (!selectedFacultyId || !facultyDepartments.length) {
-      setSelectedDepartmentId(null)
+    if (!selectedFacultyId || !selectedDepartmentId) {
       return
     }
 
@@ -120,14 +121,6 @@ export default function CoursePage() {
           </div>
 
           <form className="course-toolbar" role="search" onSubmit={(event) => event.preventDefault()}>
-            <label className="visually-hidden" htmlFor="course-search">Search courses</label>
-            <input
-              id="course-search"
-              type="search"
-              value={searchTerm}
-              onChange={(event) => setSearchTerm(event.target.value)}
-              placeholder="Search by course or instructor"
-            />
             <select
               aria-label="Faculty"
               value={selectedFacultyId || ''}
@@ -157,7 +150,20 @@ export default function CoursePage() {
                 </option>
               ))}
             </select>
+            <label className="visually-hidden" htmlFor="course-search">Search courses</label>
+            <input
+              id="course-search"
+              type="search"
+              value={searchTerm}
+              onChange={(event) => setSearchTerm(event.target.value)}
+              placeholder="Search by course or instructor"
+            />
           </form>
+          {isInstructorMode && (
+            <div className="course-instructor-actions">
+              <Link className="primary-button small" to="/courses/new">+ Add Course</Link>
+            </div>
+          )}
         </div>
       </header>
 

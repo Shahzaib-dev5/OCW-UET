@@ -18,6 +18,11 @@ class CourseStatus(enum.Enum):
     ARCHIVED = "ARCHIVED"
 
 
+class AccessLevel(enum.Enum):
+    PUBLIC = "PUBLIC"
+    RESTRICTED = "RESTRICTED"
+
+
 class Course(db.Model):
     __tablename__ = "courses"
 
@@ -35,6 +40,12 @@ class Course(db.Model):
             ondelete="CASCADE",
         ),
         nullable=False,
+        index=True,
+    )
+    owner_id = db.Column(
+        BigIntegerUnsigned,
+        db.ForeignKey("users.id", name="fk_courses_owner", ondelete="SET NULL"),
+        nullable=True,
         index=True,
     )
 
@@ -88,6 +99,23 @@ class Course(db.Model):
     syllabus = db.Column(
         db.Text().with_variant(db.Text, "mysql"),
         nullable=True,
+    )
+    learning_outcomes = db.Column(db.Text().with_variant(db.Text, "mysql"), nullable=True)
+    schedule = db.Column(db.Text().with_variant(db.Text, "mysql"), nullable=True)
+    access_level = db.Column(
+        db.Enum(AccessLevel, name="course_access_level"),
+        nullable=False,
+        default=AccessLevel.PUBLIC,
+        server_default="PUBLIC",
+        index=True,
+    )
+
+    login_required = db.Column(
+        db.Boolean,
+        nullable=False,
+        default=False,
+        server_default="0",
+        index=True,
     )
 
     instructor_name = db.Column(
@@ -158,6 +186,7 @@ class Course(db.Model):
         "Department",
         back_populates="courses",
     )
+    owner = db.relationship("User", foreign_keys=[owner_id])
 
     lectures = db.relationship(
         "Lecture",

@@ -397,7 +397,7 @@ ADMIN_DASHBOARD_HTML = """
         <button data-tab="research">Research Papers</button>
         <button data-tab="resources">Lectures & Resources</button>
         <button data-tab="internshipResources">Skills Development Resources</button>
-        <button data-tab="teachers">Teacher Approvals</button>
+        <button data-tab="teachers">Instructor Approvals</button>
         <button data-tab="students">Student Approvals</button>
       </nav>
     </aside>
@@ -599,6 +599,12 @@ ADMIN_DASHBOARD_HTML = """
                 <label>Academic year<input name="academic_year" placeholder="2025-2026" /></label>
                 <label>Thumbnail image<input name="thumbnail_file" type="file" accept="image/*" /></label>
                 <label>Thumbnail URL<input name="thumbnail" placeholder="/uploads/courses/thumbnails/course.jpg" /></label>
+                <label>Require login to view detail
+                  <select name="login_required">
+                    <option value="false">No</option>
+                    <option value="true">Yes</option>
+                  </select>
+                </label>
                 <label class="full">Short description<textarea name="short_description"></textarea></label>
                 <label class="full">Description<textarea name="description"></textarea></label>
                 <label class="full">Syllabus<textarea name="syllabus"></textarea></label>
@@ -886,6 +892,10 @@ ADMIN_DASHBOARD_HTML = """
 
         <section class="section" id="teachers">
           <div class="panel">
+            <div class="panel-head"><h2>Instructor account applications</h2></div>
+            <div class="table-wrap"><table><thead><tr><th>ID</th><th>Student</th><th>Email</th><th>Expertise</th><th>Affiliation</th><th>Status</th><th>Actions</th></tr></thead><tbody id="instructorAppsBody"></tbody></table></div>
+          </div>
+          <div class="panel">
             <div class="panel-head"><h2>Teacher course applications</h2></div>
             <div class="table-wrap"><table><thead><tr><th>ID</th><th>Teacher</th><th>Course</th><th>Status</th><th>Actions</th></tr></thead><tbody id="teachersBody"></tbody></table></div>
           </div>
@@ -902,7 +912,7 @@ ADMIN_DASHBOARD_HTML = """
   </div>
 
   <script>
-    const state = { courses: [], lectures: [], courseResources: [], departments: [], faculties: [], internships: [], internshipResources: [], invitedTalks: [], researchPapers: [], teacherApps: [], studentApps: [], users: [], user: null };
+    const state = { courses: [], lectures: [], courseResources: [], departments: [], faculties: [], internships: [], internshipResources: [], invitedTalks: [], researchPapers: [], instructorApps: [], teacherApps: [], studentApps: [], users: [], user: null };
     const $ = (id) => document.getElementById(id);
     const token = () => localStorage.getItem("ocw_admin_token") || "";
     const adminHeaders = () => {
@@ -992,15 +1002,18 @@ ADMIN_DASHBOARD_HTML = """
         let partialError = null;
 
         try {
-          const [teacherApps, studentApps, users] = await Promise.all([
+          const [instructorApps, teacherApps, studentApps, users] = await Promise.all([
+            api("/api/instructor-applications"),
             api("/api/course-teaching-applications"),
             api("/api/course-enrollments"),
             api("/api/users"),
           ]);
+          state.instructorApps = instructorApps.data || [];
           state.teacherApps = teacherApps.data || [];
           state.studentApps = studentApps.data || [];
           state.users = users.data || [];
         } catch (error) {
+          state.instructorApps = [];
           state.teacherApps = [];
           state.studentApps = [];
           state.users = [];
@@ -1376,7 +1389,10 @@ ADMIN_DASHBOARD_HTML = """
       $("internshipCount").textContent = state.internships.length;
       $("invitedTalkCount").textContent = state.invitedTalks.length;
       $("researchCount").textContent = state.researchPapers.length;
-      $("teacherCount").textContent = state.teacherApps.filter((item) => item.status === "PENDING").length;
+      $("teacherCount").textContent = (
+        state.instructorApps.filter((item) => item.status === "PENDING").length
+        + state.teacherApps.filter((item) => item.status === "PENDING").length
+      );
       $("studentCount").textContent = state.studentApps.filter((item) => item.status === "PENDING").length;
 
       $("usersBody").innerHTML = rows(state.users, (item) => `
@@ -1514,6 +1530,17 @@ ADMIN_DASHBOARD_HTML = """
           </td>
         </tr>
       `);
+      $("instructorAppsBody").innerHTML = rows(state.instructorApps, (item) => `
+        <tr>
+          <td>${item.id}</td>
+          <td>${escapeHtml(item.user?.full_name || item.user?.username || item.user_id)}</td>
+          <td>${escapeHtml(item.user?.email || "")}</td>
+          <td>${escapeHtml(item.expertise || "")}</td>
+          <td>${escapeHtml(item.affiliation || "")}</td>
+          <td>${badge(item.status)}</td>
+          <td>${reviewButtons(`/api/instructor-applications/${item.id}`, true)}</td>
+        </tr>
+      `, 7);
       $("teachersBody").innerHTML = rows(state.teacherApps, (item) => `
         <tr>
           <td>${item.id}</td>
@@ -1612,6 +1639,7 @@ ADMIN_DASHBOARD_HTML = """
         "semester",
         "academic_year",
         "thumbnail",
+        "login_required",
         "short_description",
         "description",
         "syllabus",
@@ -1848,10 +1876,11 @@ ADMIN_DASHBOARD_HTML = """
       return items.length ? items.map(template).join("") : `<tr><td colspan="${colspan}">No records found</td></tr>`;
     }
 
-    function reviewButtons(basePath) {
+    function reviewButtons(basePath, includeRevoke = false) {
       return `
         <button class="btn" onclick="review('${basePath}/approve')">Approve</button>
         <button class="btn danger" onclick="review('${basePath}/reject')">Reject</button>
+        ${includeRevoke ? `<button class="btn secondary" onclick="review('${basePath}/revoke')">Revoke</button>` : ""}
       `;
     }
 

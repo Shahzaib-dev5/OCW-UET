@@ -146,6 +146,7 @@ p {
 
 .main-nav {
   display: flex;
+  align-items: center;
   gap: 4px;
   flex-wrap: wrap;
 }
@@ -162,6 +163,69 @@ p {
 .nav-link:hover,
 .nav-link.active {
   color: #0f86dc;
+}
+
+.nav-button {
+  border: 0;
+  background: transparent;
+  cursor: pointer;
+}
+
+.nav-mode-toggle {
+  align-items: center;
+  background: #f7f8fb;
+  border: 1px solid var(--uet-line);
+  border-radius: 999px;
+  color: #333333;
+  cursor: pointer;
+  display: inline-flex;
+  flex: 0 0 auto;
+  font-size: 0.84rem;
+  font-weight: 700;
+  gap: 8px;
+  line-height: 1;
+  min-height: 36px;
+  padding: 6px 10px 6px 6px;
+  white-space: nowrap;
+}
+
+.nav-mode-toggle span {
+  background: #ffffff;
+  border: 1px solid #cfd3dd;
+  border-radius: 999px;
+  box-shadow: 0 1px 2px rgba(20, 8, 97, 0.12);
+  display: inline-block;
+  height: 22px;
+  position: relative;
+  width: 40px;
+}
+
+.nav-mode-toggle span::after {
+  background: #858585;
+  border-radius: 50%;
+  content: '';
+  height: 16px;
+  left: 2px;
+  position: absolute;
+  top: 2px;
+  transition: transform 0.2s ease, background 0.2s ease;
+  width: 16px;
+}
+
+.nav-mode-toggle.instructor {
+  background: #fff8e8;
+  border-color: #f2d48a;
+  color: #72510c;
+}
+
+.nav-mode-toggle.instructor span::after {
+  background: var(--uet-gold-dark);
+  transform: translateX(18px);
+}
+
+.nav-mode-toggle:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 3px rgba(15, 134, 220, 0.22);
 }
 
 .site-footer {
@@ -2622,6 +2686,93 @@ p {
   width: 34%;
 }
 
+.materials-heading-cell,
+.lecture-title-cell {
+  align-items: center;
+  display: flex;
+  gap: 10px;
+  justify-content: space-between;
+}
+
+.lecture-title-cell > span {
+  min-width: 0;
+}
+
+.lecture-add-button,
+.lecture-edit-button,
+.lecture-delete-button,
+.dialog-close-button {
+  align-items: center;
+  border: 0;
+  cursor: pointer;
+  display: inline-flex;
+  justify-content: center;
+}
+
+.lecture-add-button {
+  background: #16a34a;
+  border-radius: 50%;
+  color: #ffffff;
+  flex: 0 0 auto;
+  height: 34px;
+  margin: -9px -6px -9px 8px;
+  width: 34px;
+}
+
+.lecture-add-button svg,
+.lecture-edit-button svg,
+.lecture-delete-button svg,
+.dialog-close-button svg {
+  fill: none;
+  height: 18px;
+  stroke: currentColor;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-width: 2;
+  width: 18px;
+}
+
+.lecture-edit-button {
+  background: #eef6fd;
+  border: 1px solid #cfe4f6;
+  border-radius: 6px;
+  color: #0f75bc;
+  flex: 0 0 auto;
+  height: 30px;
+  width: 30px;
+}
+
+.lecture-delete-button {
+  background: #fff1f1;
+  border: 1px solid #f4c7c7;
+  border-radius: 6px;
+  color: #b42318;
+  height: 28px;
+  margin-left: 4px;
+  vertical-align: middle;
+  width: 28px;
+}
+
+.lecture-add-button:hover {
+  background: #12813b;
+}
+
+.lecture-edit-button:hover {
+  background: #dff0ff;
+}
+
+.lecture-delete-button:hover {
+  background: #ffe2e2;
+}
+
+.lecture-add-button:focus-visible,
+.lecture-edit-button:focus-visible,
+.lecture-delete-button:focus-visible,
+.dialog-close-button:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 3px rgba(15, 134, 220, 0.22);
+}
+
 .course-resource-table a,
 .muted-resource {
   color: #0f75bc;
@@ -3078,6 +3229,682 @@ p {
   font-weight: 600;
 }
 
+.account-layout {
+  display: grid;
+  gap: 18px;
+}
+
+.auth-page-shell {
+  --auth-navy: #1b1a6b;
+  --auth-blue: #1a85d6;
+  --auth-amber: #f5a800;
+  --auth-amber-text: #2a1d00;
+  --auth-bg: #f3f5fa;
+  --auth-card: #ffffff;
+  --auth-text: #14173a;
+  --auth-muted: #5d6385;
+  --auth-border: #d9deee;
+  --auth-field: #f7f8fc;
+  --auth-error: #c62828;
+  background: var(--auth-bg);
+  color: var(--auth-text);
+  font-family: 'Figtree', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  padding: 44px 20px;
+}
+
+.auth-card {
+  background: var(--auth-card);
+  border: 1px solid var(--auth-border);
+  border-radius: 22px;
+  box-shadow: 0 24px 70px rgba(27, 26, 107, 0.14);
+  display: grid;
+  grid-template-columns: 5fr 7fr;
+  margin: 0 auto;
+  max-width: 1120px;
+  overflow: hidden;
+}
+
+.auth-brand-panel {
+  background:
+    radial-gradient(circle at 18% 14%, rgba(245, 168, 0, 0.26), transparent 32%),
+    linear-gradient(145deg, var(--auth-navy), var(--auth-blue));
+  color: #ffffff;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  min-height: 620px;
+  padding: 42px;
+}
+
+.auth-brand-panel h1,
+.auth-heading h2 {
+  font-family: 'Bricolage Grotesque', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  letter-spacing: 0;
+}
+
+.auth-brand-panel h1 {
+  font-size: clamp(2rem, 4vw, 3.45rem);
+  line-height: 1.02;
+  margin: 0 0 18px;
+}
+
+.auth-brand-panel p {
+  color: rgba(255, 255, 255, 0.86);
+  font-size: 1rem;
+  line-height: 1.7;
+  margin: 0;
+  max-width: 440px;
+}
+
+.auth-feature-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.auth-feature-chips span {
+  background: rgba(255, 255, 255, 0.14);
+  border: 1px solid rgba(255, 255, 255, 0.28);
+  border-radius: 999px;
+  color: #ffffff;
+  font-size: 0.84rem;
+  padding: 9px 12px;
+}
+
+.auth-form-panel {
+  padding: 34px;
+}
+
+.auth-segment {
+  background: var(--auth-field);
+  border: 1px solid var(--auth-border);
+  border-radius: 999px;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  margin-bottom: 28px;
+  padding: 4px;
+}
+
+.auth-segment a {
+  border-radius: 999px;
+  color: var(--auth-muted);
+  font-weight: 800;
+  padding: 10px 14px;
+  text-align: center;
+  text-decoration: none;
+}
+
+.auth-segment a.active {
+  background: var(--auth-card);
+  box-shadow: 0 8px 22px rgba(27, 26, 107, 0.12);
+  color: var(--auth-navy);
+}
+
+.auth-heading {
+  margin-bottom: 22px;
+}
+
+.auth-heading h2 {
+  color: var(--auth-text);
+  font-size: clamp(1.7rem, 3vw, 2.35rem);
+  line-height: 1.1;
+  margin: 0 0 8px;
+}
+
+.auth-heading p,
+.auth-switch,
+.status-note {
+  color: var(--auth-muted);
+  margin: 0;
+}
+
+.modern-auth-form {
+  display: grid;
+  gap: 14px;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.auth-full,
+.auth-login-row {
+  grid-column: 1 / -1;
+}
+
+.auth-field {
+  color: var(--auth-text);
+  display: grid;
+  font-size: 0.88rem;
+  font-weight: 750;
+  gap: 7px;
+}
+
+.auth-field input,
+.auth-field select {
+  background: var(--auth-field);
+  border: 1.5px solid var(--auth-border);
+  border-radius: 11px;
+  color: var(--auth-text);
+  height: 46px;
+  outline: none;
+  padding: 0 13px;
+  transition: border-color 0.16s ease, box-shadow 0.16s ease, background 0.16s ease;
+  width: 100%;
+}
+
+.auth-field input:focus,
+.auth-field select:focus,
+.password-field:focus-within {
+  border-color: var(--auth-blue);
+  box-shadow: 0 0 0 4px rgba(26, 133, 214, 0.16);
+}
+
+.auth-field:has(small) input,
+.auth-field:has(small) select,
+.auth-field:has(small) .password-field {
+  border-color: var(--auth-error);
+}
+
+.auth-field small {
+  color: var(--auth-error);
+  font-size: 0.78rem;
+  font-weight: 700;
+}
+
+.password-field {
+  align-items: center;
+  background: var(--auth-field);
+  border: 1.5px solid var(--auth-border);
+  border-radius: 11px;
+  display: flex;
+  height: 46px;
+  transition: border-color 0.16s ease, box-shadow 0.16s ease;
+}
+
+.password-field input {
+  border: 0;
+  box-shadow: none;
+  height: 100%;
+}
+
+.password-field button,
+.auth-link-button,
+.auth-text-button {
+  background: transparent;
+  border: 0;
+  color: var(--auth-blue);
+  cursor: pointer;
+  font-weight: 800;
+}
+
+.password-field button {
+  padding: 0 12px;
+}
+
+.auth-login-row,
+.auth-actions {
+  align-items: center;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  justify-content: space-between;
+}
+
+.auth-checkbox {
+  align-items: center;
+  color: var(--auth-muted);
+  display: inline-flex;
+  gap: 8px;
+  font-size: 0.9rem;
+}
+
+.auth-checkbox input {
+  accent-color: var(--auth-blue);
+}
+
+.auth-primary-button {
+  background: var(--auth-amber);
+  border: 0;
+  border-radius: 11px;
+  color: var(--auth-amber-text);
+  cursor: pointer;
+  font-weight: 900;
+  min-height: 46px;
+  padding: 0 18px;
+}
+
+.auth-primary-button:disabled {
+  cursor: default;
+  opacity: 0.72;
+}
+
+.auth-primary-button:focus-visible,
+.auth-segment a:focus-visible,
+.auth-link-button:focus-visible,
+.auth-text-button:focus-visible,
+.password-field button:focus-visible {
+  outline: 3px solid rgba(26, 133, 214, 0.3);
+  outline-offset: 2px;
+}
+
+.google-button-wrap {
+  margin-top: 18px;
+  min-height: 44px;
+}
+
+.auth-reset-form {
+  background: var(--auth-field);
+  border: 1px solid var(--auth-border);
+  border-radius: 14px;
+  display: grid;
+  gap: 12px;
+  margin-top: 18px;
+  padding: 14px;
+}
+
+.auth-switch {
+  margin-top: 18px;
+}
+
+.auth-switch a {
+  color: var(--auth-blue);
+  font-weight: 900;
+}
+
+@media (prefers-color-scheme: dark) {
+  .auth-page-shell {
+    --auth-bg: #11162c;
+    --auth-card: #181d38;
+    --auth-text: #f3f5ff;
+    --auth-muted: #b8bfd8;
+    --auth-border: #333b62;
+    --auth-field: #202644;
+  }
+}
+
+.status-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.status-row span,
+.learning-row span {
+  background: #eef5ff;
+  border-radius: 6px;
+  color: var(--uet-navy);
+  font-size: 0.8rem;
+  font-weight: 700;
+  padding: 6px 10px;
+}
+
+.learning-list {
+  margin-top: 16px;
+}
+
+.learning-row {
+  align-items: center;
+  border-top: 1px solid var(--uet-line);
+  display: grid;
+  gap: 8px;
+  grid-template-columns: minmax(0, 1fr) auto;
+  padding: 12px 0;
+}
+
+.learning-row p {
+  color: var(--uet-muted);
+  grid-column: 1 / -1;
+  margin: 0;
+}
+
+.admin-review-row {
+  align-items: start;
+  border-top: 1px solid var(--uet-line);
+  display: grid;
+  gap: 16px;
+  grid-template-columns: minmax(0, 1fr) auto;
+  padding: 16px 0;
+}
+
+.admin-review-row:first-child {
+  border-top: 0;
+}
+
+.admin-review-row strong,
+.admin-review-row span {
+  display: block;
+}
+
+.admin-review-row span,
+.admin-review-row p {
+  color: var(--uet-muted);
+  margin: 4px 0 0;
+}
+
+.resource-form.single-column {
+  grid-template-columns: 1fr;
+}
+
+.lock-notice {
+  background: #fff8e8;
+  border: 1px solid #f2d48a;
+  border-radius: 8px;
+  color: #72510c;
+  font-size: 0.84rem;
+  font-weight: 700;
+  margin: 0 0 12px;
+  padding: 10px 12px;
+}
+
+.course-start-button {
+  border: 0;
+  cursor: pointer;
+  text-decoration: none;
+}
+
+.course-start-button:disabled {
+  cursor: default;
+  opacity: 0.75;
+}
+
+.course-instructor-actions {
+  display: flex;
+  justify-content: flex-start;
+}
+
+.course-editor-form {
+  align-items: start;
+}
+
+.course-approval-note {
+  border: 1px solid #f2d48a;
+  border-radius: 8px;
+  background: #fff8e8;
+  color: #72510c;
+  min-height: 42px;
+  padding: 9px 10px;
+}
+
+.course-approval-note span,
+.course-approval-note strong {
+  display: block;
+}
+
+.checkbox-field {
+  align-items: center;
+  display: flex;
+  flex-direction: row;
+  gap: 10px;
+}
+
+.checkbox-field input {
+  width: 18px;
+  height: 18px;
+}
+
+.instructor-switch-box a {
+  color: #0f75bc;
+  font-weight: 800;
+}
+
+.instructor-material-panel {
+  background: #f8fbff;
+  border: 1px solid #dbe8f5;
+  border-radius: 8px;
+  padding: 18px;
+}
+
+.instructor-upload-grid {
+  display: grid;
+  gap: 18px;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.instructor-upload-grid.resource-only {
+  grid-template-columns: minmax(0, 1fr);
+}
+
+.instructor-upload-form {
+  background: #ffffff;
+  border: 1px solid var(--uet-line);
+  border-radius: 8px;
+  display: grid;
+  gap: 12px;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  padding: 16px;
+}
+
+.instructor-upload-form h4 {
+  color: var(--uet-navy);
+  grid-column: 1 / -1;
+  margin: 0;
+}
+
+.instructor-upload-form label {
+  color: var(--uet-navy);
+  display: grid;
+  font-size: 0.82rem;
+  font-weight: 700;
+  gap: 6px;
+}
+
+.instructor-upload-form label.wide,
+.instructor-upload-form button {
+  grid-column: 1 / -1;
+}
+
+.instructor-upload-form input,
+.instructor-upload-form select,
+.instructor-upload-form textarea {
+  border: 1px solid var(--uet-line);
+  border-radius: 8px;
+  padding: 9px 10px;
+  width: 100%;
+}
+
+.instructor-upload-form textarea {
+  min-height: 82px;
+  resize: vertical;
+}
+
+.lecture-dialog-backdrop {
+  align-items: center;
+  background: rgba(20, 8, 97, 0.42);
+  display: flex;
+  inset: 0;
+  justify-content: center;
+  padding: 20px;
+  position: fixed;
+  z-index: 90;
+}
+
+.lecture-dialog {
+  background: #ffffff;
+  border-radius: 8px;
+  box-shadow: 0 24px 70px rgba(20, 8, 97, 0.24);
+  max-height: calc(100vh - 40px);
+  max-width: 720px;
+  overflow: auto;
+  width: min(100%, 720px);
+}
+
+.lecture-dialog-header {
+  align-items: center;
+  border-bottom: 1px solid var(--uet-line);
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 16px 18px;
+}
+
+.lecture-dialog-header h3 {
+  color: var(--uet-navy);
+  font-size: 1.05rem;
+  margin: 0;
+}
+
+.dialog-close-button {
+  background: #f7f8fb;
+  border-radius: 6px;
+  color: #333333;
+  height: 34px;
+  width: 34px;
+}
+
+.lecture-dialog-form {
+  border: 0;
+  border-radius: 0;
+}
+
+.lecture-material-builder {
+  background: #f8fbff;
+  border: 1px solid #dbe8f5;
+  border-radius: 8px;
+  display: grid;
+  gap: 12px;
+  grid-column: 1 / -1;
+  grid-template-columns: minmax(150px, 0.7fr) minmax(220px, 1fr);
+  padding: 14px;
+}
+
+.lecture-material-builder .wide {
+  grid-column: 1 / -1;
+}
+
+.lecture-material-builder .lecture-stack-add {
+  grid-column: 1 / -1;
+  justify-self: start;
+}
+
+.lecture-stack-list {
+  border: 1px dashed #cdd6e2;
+  border-radius: 8px;
+  display: grid;
+  gap: 8px;
+  grid-column: 1 / -1;
+  padding: 10px;
+}
+
+.lecture-stack-list p {
+  color: var(--uet-muted);
+  font-size: 0.82rem;
+  margin: 0;
+}
+
+.lecture-stack-item {
+  align-items: center;
+  background: #ffffff;
+  border: 1px solid var(--uet-line);
+  border-radius: 6px;
+  display: grid;
+  gap: 10px;
+  grid-template-columns: auto auto minmax(0, 1fr) auto;
+  min-height: 38px;
+  padding: 7px 8px;
+}
+
+.lecture-stack-item span {
+  background: #eef6fd;
+  border-radius: 50%;
+  color: #0f75bc;
+  display: inline-grid;
+  font-size: 0.76rem;
+  font-weight: 800;
+  height: 24px;
+  place-items: center;
+  width: 24px;
+}
+
+.lecture-stack-item strong {
+  color: var(--uet-navy);
+  font-size: 0.82rem;
+}
+
+.lecture-stack-item small {
+  color: var(--uet-muted);
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.lecture-stack-item button {
+  background: #fff1f1;
+  border: 1px solid #f4c7c7;
+  border-radius: 6px;
+  color: #b42318;
+  grid-column: auto;
+  height: 28px;
+  width: 28px;
+}
+
+.lecture-stack-item button svg {
+  fill: none;
+  height: 16px;
+  stroke: currentColor;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-width: 2;
+  width: 16px;
+}
+
+.lecture-dialog-actions {
+  align-items: center;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  grid-column: 1 / -1;
+}
+
+.book-card-actions button {
+  border: 1px solid var(--uet-line);
+  border-radius: 6px;
+  background: #ffffff;
+  color: var(--uet-navy);
+  cursor: pointer;
+  font-weight: 700;
+  padding: 7px 10px;
+}
+
+@media (max-width: 920px) {
+  .auth-layout {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 860px) {
+  .auth-page-shell {
+    padding: 24px 14px;
+  }
+
+  .auth-card {
+    grid-template-columns: 1fr;
+  }
+
+  .auth-brand-panel {
+    min-height: 0;
+    padding: 30px;
+  }
+
+  .auth-feature-chips {
+    display: none;
+  }
+}
+
+@media (max-width: 520px) {
+  .auth-form-panel {
+    padding: 22px;
+  }
+
+  .modern-auth-form {
+    grid-template-columns: 1fr;
+  }
+
+  .auth-login-row,
+  .auth-actions {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+}
+
 .loading-box {
   background: rgba(255, 255, 255, 0.9);
   border: 1px solid var(--uet-line);
@@ -3198,7 +4025,10 @@ p {
 
   .course-detail-hero-inner,
   .course-detail-layout,
-  .course-intro-grid {
+  .course-intro-grid,
+  .instructor-upload-grid,
+  .instructor-upload-form,
+  .lecture-material-builder {
     grid-template-columns: 1fr;
   }
 
@@ -3277,6 +4107,7 @@ p {
 
   .main-nav {
     display: none;
+    align-items: stretch;
     width: 100%;
     flex-direction: column;
     gap: 6px;
@@ -3297,6 +4128,11 @@ p {
   .nav-link:hover,
   .nav-link.active {
     background: #eef6fd;
+  }
+
+  .nav-mode-toggle {
+    justify-content: flex-start;
+    width: 100%;
   }
 
   .footer-main {

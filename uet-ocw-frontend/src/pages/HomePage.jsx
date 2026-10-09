@@ -42,7 +42,7 @@ export default function HomePage() {
             <p className="eyebrow">UET Open Courseware</p>
             <h2>Learning resources, courses and opportunities in one place.</h2>
             <p>
-              Explore academic modules, course material, invited talks and skills development pathways from the University of Engineering and Technology.
+              Explore academic modules, course material, tech talks and skills development pathways from the University of Engineering and Technology.
             </p>
             <div className="home-hero-actions">
               <Link className="primary-button" to="/courses">Explore Courses</Link>

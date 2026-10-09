@@ -1,14 +1,16 @@
 const API_BASE_URL = (import.meta.env.VITE_API_BASE_URL || '').replace(/\/$/, '')
 
 export async function fetchJson(endpoint) {
-  const response = await fetch(`${API_BASE_URL}/api${endpoint}`)
+  const response = await fetch(`${API_BASE_URL}/api${endpoint}`, {
+    headers: authHeader(),
+  })
   const payload = await response.json().catch(() => ({}))
 
   if (!response.ok) {
     throw new Error(payload.message || 'Unable to load data.')
   }
 
-  const data = payload.data ?? []
+  const data = Object.prototype.hasOwnProperty.call(payload, 'data') ? payload.data : []
   if (Array.isArray(data) && data.some((item) => Object.prototype.hasOwnProperty.call(item, 'display_order'))) {
     return [...data].sort(byDisplayOrder)
   }
@@ -17,6 +19,11 @@ export async function fetchJson(endpoint) {
 }
 
 export async function sendJson(endpoint, { method = 'POST', body, token } = {}) {
+  const payload = await sendJsonRaw(endpoint, { method, body, token })
+  return payload.data ?? payload
+}
+
+export async function sendJsonRaw(endpoint, { method = 'POST', body, token } = {}) {
   const headers = {
     'Content-Type': 'application/json',
     ...authHeader(token),
@@ -33,7 +40,7 @@ export async function sendJson(endpoint, { method = 'POST', body, token } = {}) 
     throw new Error(payload.message || 'Unable to save data.')
   }
 
-  return payload.data ?? payload
+  return payload
 }
 
 export async function deleteJson(endpoint, { token } = {}) {

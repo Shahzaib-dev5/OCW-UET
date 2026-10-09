@@ -1,27 +1,37 @@
 import { useEffect, useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
+import { useAuth } from '../auth/AuthContext'
 import TitleImageFallback from '../components/TitleImageFallback'
-import { fetchJson, fileNameFromUrl, fileUrl } from '../data/api'
+import { fetchJson, fileNameFromUrl, fileUrl, sendJson } from '../data/api'
 
 export default function BooksPage() {
+  const { user } = useAuth()
+  const [faculties, setFaculties] = useState([])
+  const [departments, setDepartments] = useState([])
   const [courses, setCourses] = useState([])
   const [resources, setResources] = useState([])
-  const [selectedCourseId, setSelectedCourseId] = useState('')
+  const [selectedFacultyId, setSelectedFacultyId] = useState(null)
+  const [selectedDepartmentId, setSelectedDepartmentId] = useState(null)
   const [searchTerm, setSearchTerm] = useState('')
   const [debouncedSearchTerm, setDebouncedSearchTerm] = useState('')
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
+  const [requestingId, setRequestingId] = useState(null)
 
   useEffect(() => {
     async function loadBooks() {
       try {
         setLoading(true)
         setError('')
-        const [coursesData, resourcesData] = await Promise.all([
+        const [facultiesData, departmentsData, coursesData, resourcesData] = await Promise.all([
+          fetchJson('/faculties'),
+          fetchJson('/departments'),
           fetchJson('/courses'),
           fetchJson('/course-resources'),
         ])
 
+        setFaculties(facultiesData)
+        setDepartments(departmentsData)
         setCourses(coursesData)
         setResources(resourcesData)
       } catch (loadError) {
@@ -49,6 +59,21 @@ export default function BooksPage() {
     }, {})
   }, [courses])
 
+  const facultyDepartments = useMemo(() => {
+    if (!selectedFacultyId) return departments
+    return departments.filter((department) => String(department.faculty_id) === String(selectedFacultyId))
+  }, [departments, selectedFacultyId])
+
+  useEffect(() => {
+    if (!selectedFacultyId || !selectedDepartmentId) {
+      return
+    }
+
+    if (!facultyDepartments.some((department) => String(department.id) === String(selectedDepartmentId))) {
+      setSelectedDepartmentId(null)
+    }
+  }, [facultyDepartments, selectedDepartmentId, selectedFacultyId])
+
   const books = useMemo(
     () => resources.filter((resource) => String(resource.resource_type || '').toUpperCase() === 'BOOK'),
     [resources],
@@ -57,16 +82,39 @@ export default function BooksPage() {
   const filteredBooks = useMemo(() => {
     return books.filter((book) => {
       const course = book.course || coursesById[String(book.course_id)] || null
-      const matchesCourse = !selectedCourseId || String(book.course_id) === String(selectedCourseId)
+      let matchesDepartment = true
+
+      if (selectedDepartmentId) {
+        matchesDepartment = String(course?.department_id) === String(selectedDepartmentId)
+      } else if (selectedFacultyId) {
+        const departmentIds = new Set(facultyDepartments.map((department) => String(department.id)))
+        matchesDepartment = departmentIds.has(String(course?.department_id))
+      }
+
       const haystack = `${book.title || ''} ${book.description || ''} ${course?.title || ''} ${course?.course_code || ''}`.toLowerCase()
       const matchesSearch = !debouncedSearchTerm || haystack.includes(debouncedSearchTerm)
-      return matchesCourse && matchesSearch
+      return matchesDepartment && matchesSearch
     })
-  }, [books, coursesById, debouncedSearchTerm, selectedCourseId])
+  }, [books, coursesById, debouncedSearchTerm, facultyDepartments, selectedDepartmentId, selectedFacultyId])
 
   const clearFilters = () => {
-    setSelectedCourseId('')
+    setSelectedFacultyId(null)
+    setSelectedDepartmentId(null)
     setSearchTerm('')
+  }
+
+  const requestBookEnrollment = async (bookId) => {
+    if (!user) return
+    try {
+      setRequestingId(bookId)
+      await sendJson('/course-enrollments/resources', { body: { resource_type: 'BOOK', resource_id: Number(bookId) } })
+      const resourcesData = await fetchJson('/course-resources')
+      setResources(resourcesData)
+    } catch (requestError) {
+      setError(requestError.message || 'Unable to request book access.')
+    } finally {
+      setRequestingId(null)
+    }
   }
 
   return (
@@ -84,6 +132,33 @@ export default function BooksPage() {
           </div>
 
           <form className="course-toolbar" role="search" onSubmit={(event) => event.preventDefault()}>
+            <select
+              aria-label="Faculty"
+              value={selectedFacultyId || ''}
+              onChange={(event) => {
+                setSelectedFacultyId(event.target.value)
+                setSelectedDepartmentId(null)
+              }}
+            >
+              <option value="">All faculties</option>
+              {faculties.map((faculty) => (
+                <option key={faculty.id} value={faculty.id}>
+                  {faculty.name}
+                </option>
+              ))}
+            </select>
+            <select
+              aria-label="Department"
+              value={selectedDepartmentId || ''}
+              onChange={(event) => setSelectedDepartmentId(event.target.value)}
+            >
+              <option value="">All departments</option>
+              {facultyDepartments.map((department) => (
+                <option key={department.id} value={department.id}>
+                  {department.name}
+                </option>
+              ))}
+            </select>
             <label className="visually-hidden" htmlFor="book-search">Search books</label>
             <input
               id="book-search"
@@ -92,18 +167,6 @@ export default function BooksPage() {
               onChange={(event) => setSearchTerm(event.target.value)}
               placeholder="Search by book or course"
             />
-            <select
-              aria-label="Course"
-              value={selectedCourseId}
-              onChange={(event) => setSelectedCourseId(event.target.value)}
-            >
-              <option value="">All courses</option>
-              {courses.map((course) => (
-                <option key={course.id} value={course.id}>
-                  {formatCourseTitle(course)}
-                </option>
-              ))}
-            </select>
           </form>
         </div>
       </header>
@@ -130,21 +193,24 @@ export default function BooksPage() {
               <div className="course-type-pills" role="list" aria-label="Book quick filters">
                 <button
                   type="button"
-                  className={!selectedCourseId ? 'course-pill active' : 'course-pill'}
-                  aria-pressed={!selectedCourseId}
-                  onClick={() => setSelectedCourseId('')}
+                  className={!selectedFacultyId && !selectedDepartmentId ? 'course-pill active' : 'course-pill'}
+                  aria-pressed={!selectedFacultyId && !selectedDepartmentId}
+                  onClick={() => {
+                    setSelectedFacultyId(null)
+                    setSelectedDepartmentId(null)
+                  }}
                 >
                   All Books
                 </button>
                 <button
                   type="button"
-                  className={selectedCourseId ? 'course-pill active' : 'course-pill'}
-                  aria-pressed={Boolean(selectedCourseId)}
+                  className={selectedFacultyId || selectedDepartmentId ? 'course-pill active' : 'course-pill'}
+                  aria-pressed={Boolean(selectedFacultyId || selectedDepartmentId)}
                   onClick={() => {
-                    if (!selectedCourseId && courses[0]) setSelectedCourseId(String(courses[0].id))
+                    if (!selectedFacultyId && faculties[0]) setSelectedFacultyId(String(faculties[0].id))
                   }}
                 >
-                  By Course
+                  By Faculty
                 </button>
               </div>
               <p className="course-result-count" aria-live="polite">
@@ -185,13 +251,22 @@ export default function BooksPage() {
                             {book.external_url && <span>External link</span>}
                           </div>
                           <div className="book-card-actions">
-                            {book.file_url && (
+                            {book.can_access_materials && book.file_url && (
                               <>
                                 <a href={fileUrl(book.file_url)} target="_blank" rel="noreferrer">View</a>
                                 <a href={fileUrl(book.file_url)} download={fileNameFromUrl(book.file_url, book.title)}>Download</a>
                               </>
                             )}
-                            {book.external_url && <a href={fileUrl(book.external_url)} target="_blank" rel="noreferrer">Link</a>}
+                            {book.can_access_materials && book.external_url && <a href={fileUrl(book.external_url)} target="_blank" rel="noreferrer">Link</a>}
+                            {!book.can_access_materials && (
+                              user ? (
+                                <button type="button" onClick={() => requestBookEnrollment(book.id)} disabled={requestingId === book.id}>
+                                  {book.enrollment?.status === 'PENDING' ? 'Awaiting Approval' : ['REJECTED', 'REVOKED'].includes(book.enrollment?.status) ? 'Reapply' : 'Request Enrollment'}
+                                </button>
+                              ) : (
+                                <Link to={`/login?returnTo=${encodeURIComponent('/books')}`}>Login to Request</Link>
+                              )
+                            )}
                           </div>
                         </footer>
                       </div>
@@ -202,7 +277,7 @@ export default function BooksPage() {
             ) : (
               <section className="course-empty-state" aria-live="polite">
                 <h3>No books match your search</h3>
-                <p>Try a different keyword or course filter.</p>
+                <p>Try a different keyword, faculty, or department.</p>
                 <button type="button" className="details-button" onClick={clearFilters}>
                   Clear filters
                 </button>

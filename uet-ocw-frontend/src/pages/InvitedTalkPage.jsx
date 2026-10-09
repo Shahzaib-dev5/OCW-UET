@@ -28,7 +28,7 @@ export default function InvitedTalkPage() {
         setDepartments(departmentsData)
         setTalks(talksData)
       } catch (loadError) {
-        setError(loadError.message || 'Unable to load invited talks.')
+        setError(loadError.message || 'Unable to load tech talks.')
       } finally {
         setLoading(false)
       }
@@ -51,8 +51,7 @@ export default function InvitedTalkPage() {
   }, [departments, selectedFacultyId])
 
   useEffect(() => {
-    if (!selectedFacultyId || !facultyDepartments.length) {
-      setSelectedDepartmentId(null)
+    if (!selectedFacultyId || !selectedDepartmentId) {
       return
     }
 
@@ -95,21 +94,13 @@ export default function InvitedTalkPage() {
             <nav className="breadcrumb-line" aria-label="Breadcrumb">
               <Link to="/">Home</Link>
               <span aria-hidden="true">/</span>
-              <span>Invited Talks</span>
+              <span>Tech Talks</span>
             </nav>
-            <h2>Invited talks</h2>
+            <h2>Tech talks</h2>
             <p>Department seminars, guest lectures, recordings, and publications</p>
           </div>
 
           <form className="course-toolbar" role="search" onSubmit={(event) => event.preventDefault()}>
-            <label className="visually-hidden" htmlFor="talk-search">Search invited talks</label>
-            <input
-              id="talk-search"
-              type="search"
-              value={searchTerm}
-              onChange={(event) => setSearchTerm(event.target.value)}
-              placeholder="Search by talk, event, or presenter"
-            />
             <select
               aria-label="Faculty"
               value={selectedFacultyId || ''}
@@ -137,6 +128,14 @@ export default function InvitedTalkPage() {
                 </option>
               ))}
             </select>
+            <label className="visually-hidden" htmlFor="talk-search">Search tech talks</label>
+            <input
+              id="talk-search"
+              type="search"
+              value={searchTerm}
+              onChange={(event) => setSearchTerm(event.target.value)}
+              placeholder="Search by talk, event, or presenter"
+            />
           </form>
         </div>
       </header>
@@ -145,7 +144,7 @@ export default function InvitedTalkPage() {
         {error && <div className="alert-box">{error}</div>}
 
         {loading ? (
-          <section className="course-grid" aria-label="Loading invited talks">
+          <section className="course-grid" aria-label="Loading tech talks">
             {[1, 2, 3].map((item) => (
               <article key={item} className="course-card skeleton-card" aria-hidden="true">
                 <div className="skeleton-media" />
@@ -159,17 +158,17 @@ export default function InvitedTalkPage() {
           </section>
         ) : (
           <>
-            <section className="course-results-bar" aria-label="Invited talk result count">
+            <section className="course-results-bar" aria-label="Tech talk result count">
               <p className="course-result-count" aria-live="polite">
                 {filteredTalks.length} {filteredTalks.length === 1 ? 'talk' : 'talks'}
               </p>
             </section>
 
             {filteredTalks.length ? (
-              <section className="course-grid" aria-label="Invited talks">
+              <section className="course-grid" aria-label="Tech talks">
                 {filteredTalks.map((talk) => (
                   <article key={talk.id} className="course-card research-card">
-                    <Link className="course-card-link" to={`/invited-talks/${talk.id}`} aria-label={`View ${talk.talk_title || 'invited talk'}`}>
+                    <Link className="course-card-link" to={`/invited-talks/${talk.id}`} aria-label={`View ${talk.talk_title || 'tech talk'}`}>
                       <div className="course-card-media-wrap">
                         <div className="course-card-media placeholder research-card-media" aria-hidden="true">
                           <span>Talk</span>
@@ -189,7 +188,7 @@ export default function InvitedTalkPage() {
                       </div>
 
                       <footer className="course-card-footer">
-                        <div className="course-card-meta" aria-label="Invited talk facts">
+                        <div className="course-card-meta" aria-label="Tech talk facts">
                           <span>{formatDate(talk.talk_date)}</span>
                           {talk.video_url && <span>Video</span>}
                           {talk.upload_url && <span>Upload</span>}
@@ -207,7 +206,7 @@ export default function InvitedTalkPage() {
               </section>
             ) : (
               <section className="course-empty-state" aria-live="polite">
-                <h3>No invited talks match your search</h3>
+                <h3>No tech talks match your search</h3>
                 <p>Try a different keyword, faculty, or department.</p>
                 <button type="button" className="details-button" onClick={clearFilters}>
                   Clear filters

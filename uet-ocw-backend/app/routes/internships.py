@@ -6,6 +6,7 @@ from sqlalchemy.exc import IntegrityError, OperationalError
 
 from app.extensions import db
 from app.models.department import Department
+from app.models.course import AccessLevel
 from app.models.internship import Internship, InternshipStatus
 from app.services.authz import ADMIN, require_roles
 
@@ -168,6 +169,8 @@ _INTERNSHIP_FIELDS = {
     "category",
     "duration",
     "eligibility",
+    "schedule",
+    "access_level",
     "application_url",
     "thumbnail",
     "start_date",
@@ -220,11 +223,18 @@ def _validated_values(payload, require_required_fields):
         "category",
         "duration",
         "eligibility",
+        "schedule",
         "application_url",
         "thumbnail",
     ]:
         if field_name in values and values[field_name] is not None and not isinstance(values[field_name], str):
             return None, _error(f"{field_name} must be a string or null", 400)
+    if "access_level" in values and values["access_level"] is not None:
+        try:
+            values["access_level"] = AccessLevel(str(values["access_level"]).upper())
+        except (TypeError, ValueError):
+            allowed = ", ".join(item.value for item in AccessLevel)
+            return None, _error(f"access_level must be one of: {allowed}", 400)
 
     for field_name in ["start_date", "end_date"]:
         if field_name in values and values[field_name] is not None:
@@ -270,6 +280,8 @@ def _serialize_internship(internship):
         "category": internship.category,
         "duration": internship.duration,
         "eligibility": internship.eligibility,
+        "schedule": internship.schedule,
+        "access_level": internship.access_level.value if internship.access_level else "PUBLIC",
         "application_url": internship.application_url,
         "thumbnail": internship.thumbnail,
         "start_date": internship.start_date.isoformat() if internship.start_date else None,

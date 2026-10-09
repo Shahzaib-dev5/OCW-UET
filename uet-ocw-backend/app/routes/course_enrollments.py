@@ -6,8 +6,9 @@ from sqlalchemy.exc import IntegrityError, OperationalError
 
 from app.extensions import db
 from app.models.course import Course
-from app.models.enrollment import ApplicationStatus, CourseEnrollment, CourseTeachingApplication
+from app.models.enrollment import ApplicationStatus, CourseEnrollment, CourseTeachingApplication, ResourceEnrollment, ResourceType
 from app.models.resource import CourseResource
+from app.models.internship import Internship
 from app.models.lecture import Lecture
 from app.models.user import User
 from app.services.authz import (
@@ -17,6 +18,7 @@ from app.services.authz import (
     approved_student_course_ids,
     can_manage_course,
     current_user,
+    is_approved_instructor,
     require_roles,
     role_name,
 )
@@ -43,7 +45,7 @@ def get_course_enrollments():
     query = select(CourseEnrollment).order_by(CourseEnrollment.id.desc())
     if role_name(user) == STUDENT:
         query = query.where(CourseEnrollment.student_id == user.id)
-    elif role_name(user) == TEACHER:
+    elif is_approved_instructor(user):
         query = query.where(CourseEnrollment.course_id.in_(_teacher_course_ids(user.id)))
     elif role_name(user) != ADMIN:
         return _error("You do not have permission to view course enrollments", 403)
@@ -83,11 +85,12 @@ def apply_for_course():
         )
     )
     if existing is not None:
-        if existing.status == ApplicationStatus.REJECTED:
+        if existing.status in {ApplicationStatus.REJECTED, ApplicationStatus.REVOKED}:
             existing.status = ApplicationStatus.PENDING
             existing.reviewed_by = None
             existing.reviewed_at = None
             existing.message = payload.get("message")
+            existing.review_reason = None
             db.session.commit()
         return jsonify({"status": "success", "data": _serialize_enrollment(existing)})
 
@@ -117,6 +120,109 @@ def approve_course_enrollment(enrollment_id):
 @course_enrollments_bp.route("/<int:enrollment_id>/reject", methods=["PATCH"])
 def reject_course_enrollment(enrollment_id):
     return _review_enrollment(enrollment_id, ApplicationStatus.REJECTED)
+
+
+@course_enrollments_bp.route("/<int:enrollment_id>/revoke", methods=["PATCH"])
+def revoke_course_enrollment(enrollment_id):
+    return _review_enrollment(enrollment_id, ApplicationStatus.REVOKED)
+
+
+@course_enrollments_bp.route("/resources", methods=["GET"])
+def get_resource_enrollments():
+    user = current_user()
+    if user is None:
+        return _error("Authentication required. Send Authorization: Bearer <token>", 401)
+    query = select(ResourceEnrollment).order_by(ResourceEnrollment.id.desc())
+    if role_name(user) != ADMIN:
+        query = query.where(ResourceEnrollment.student_id == user.id)
+    enrollments = db.session.scalars(query).all()
+    return jsonify({"status": "success", "data": [_serialize_resource_enrollment(item) for item in enrollments]})
+
+
+@course_enrollments_bp.route("/resources", methods=["POST"])
+@require_roles(STUDENT)
+def request_resource_enrollment():
+    user = current_user()
+    payload = request.get_json(silent=True) or {}
+    resource_type = _resource_type(payload.get("resource_type"))
+    resource_id = payload.get("resource_id")
+    if isinstance(resource_id, str) and resource_id.isdigit():
+        resource_id = int(resource_id)
+    if resource_type is None:
+        return _error("resource_type must be COURSE, BOOK, or SKILL", 400)
+    if not isinstance(resource_id, int) or resource_id <= 0:
+        return _error("resource_id must be a positive integer", 400)
+    if resource_type == ResourceType.COURSE:
+        if db.session.get(Course, resource_id) is None:
+            return _error("Course not found", 404)
+        existing = db.session.scalar(
+            select(CourseEnrollment).where(
+                CourseEnrollment.student_id == user.id,
+                CourseEnrollment.course_id == resource_id,
+            )
+        )
+        if existing is not None:
+            if existing.status in {ApplicationStatus.REJECTED, ApplicationStatus.REVOKED}:
+                existing.status = ApplicationStatus.PENDING
+                existing.reviewed_by = None
+                existing.reviewed_at = None
+                existing.review_reason = None
+                existing.message = payload.get("message")
+                db.session.commit()
+            return jsonify({"status": "success", "data": _serialize_enrollment(existing)})
+        enrollment = CourseEnrollment(student_id=user.id, course_id=resource_id, message=payload.get("message"))
+        db.session.add(enrollment)
+        db.session.commit()
+        return jsonify({"status": "success", "data": _serialize_enrollment(enrollment)}), 201
+    if resource_type == ResourceType.BOOK and db.session.get(CourseResource, resource_id) is None:
+        return _error("Book resource not found", 404)
+    if resource_type == ResourceType.SKILL and db.session.get(Internship, resource_id) is None:
+        return _error("Skills development program not found", 404)
+
+    existing = db.session.scalar(
+        select(ResourceEnrollment).where(
+            ResourceEnrollment.student_id == user.id,
+            ResourceEnrollment.resource_type == resource_type,
+            ResourceEnrollment.resource_id == resource_id,
+        )
+    )
+    if existing is not None:
+        if existing.status in {ApplicationStatus.REJECTED, ApplicationStatus.REVOKED}:
+            existing.status = ApplicationStatus.PENDING
+            existing.reviewed_by = None
+            existing.reviewed_at = None
+            existing.review_reason = None
+            existing.message = payload.get("message")
+            db.session.commit()
+        return jsonify({"status": "success", "data": _serialize_resource_enrollment(existing)})
+
+    enrollment = ResourceEnrollment(
+        student_id=user.id,
+        resource_type=resource_type,
+        resource_id=resource_id,
+        message=payload.get("message"),
+    )
+    db.session.add(enrollment)
+    db.session.commit()
+    return jsonify({"status": "success", "data": _serialize_resource_enrollment(enrollment)}), 201
+
+
+@course_enrollments_bp.route("/resources/<int:enrollment_id>/approve", methods=["PATCH"])
+@require_roles(ADMIN)
+def approve_resource_enrollment(enrollment_id):
+    return _review_resource_enrollment(enrollment_id, ApplicationStatus.APPROVED)
+
+
+@course_enrollments_bp.route("/resources/<int:enrollment_id>/reject", methods=["PATCH"])
+@require_roles(ADMIN)
+def reject_resource_enrollment(enrollment_id):
+    return _review_resource_enrollment(enrollment_id, ApplicationStatus.REJECTED)
+
+
+@course_enrollments_bp.route("/resources/<int:enrollment_id>/revoke", methods=["PATCH"])
+@require_roles(ADMIN)
+def revoke_resource_enrollment(enrollment_id):
+    return _review_resource_enrollment(enrollment_id, ApplicationStatus.REVOKED)
 
 
 @course_enrollments_bp.route("/student/<int:student_id>", methods=["GET"])
@@ -176,15 +282,12 @@ def get_my_approved_courses():
 
     if role_name(user) == ADMIN:
         courses = db.session.scalars(select(Course).order_by(Course.display_order, Course.id)).all()
-    elif role_name(user) == TEACHER:
+    elif is_approved_instructor(user):
+        course_ids = set(_teacher_course_ids(user.id))
+        owned_ids = db.session.scalars(select(Course.id).where(Course.owner_id == user.id)).all()
+        course_ids.update(owned_ids)
         courses = db.session.scalars(
-            select(Course)
-            .join(CourseTeachingApplication)
-            .where(
-                CourseTeachingApplication.teacher_id == user.id,
-                CourseTeachingApplication.status == ApplicationStatus.APPROVED,
-            )
-            .order_by(Course.display_order, Course.id)
+            select(Course).where(Course.id.in_(course_ids)).order_by(Course.display_order, Course.id)
         ).all()
     else:
         course_ids = approved_student_course_ids() or []
@@ -245,8 +348,8 @@ def _review_enrollment(enrollment_id, status):
     enrollment = db.session.get(CourseEnrollment, enrollment_id)
     if enrollment is None:
         return _error("Course enrollment not found", 404)
-    if role_name(user) != ADMIN and not can_manage_course(enrollment.course_id):
-        return _error("Only admin or an approved teacher for this course can review enrollments", 403)
+    if role_name(user) != ADMIN:
+        return _error("Only admin can review enrollments", 403)
 
     payload = request.get_json(silent=True) or {}
     enrollment.status = status
@@ -254,9 +357,27 @@ def _review_enrollment(enrollment_id, status):
     enrollment.reviewed_at = datetime.utcnow()
     if "message" in payload:
         enrollment.message = payload["message"]
+    if "reason" in payload:
+        enrollment.review_reason = payload["reason"]
 
     db.session.commit()
     return jsonify({"status": "success", "data": _serialize_enrollment(enrollment)})
+
+
+def _review_resource_enrollment(enrollment_id, status):
+    enrollment = db.session.get(ResourceEnrollment, enrollment_id)
+    if enrollment is None:
+        return _error("Resource enrollment not found", 404)
+    payload = request.get_json(silent=True) or {}
+    enrollment.status = status
+    enrollment.reviewed_by = current_user().id
+    enrollment.reviewed_at = datetime.utcnow()
+    if "message" in payload:
+        enrollment.message = payload["message"]
+    if "reason" in payload:
+        enrollment.review_reason = payload["reason"]
+    db.session.commit()
+    return jsonify({"status": "success", "data": _serialize_resource_enrollment(enrollment)})
 
 
 def _teacher_course_ids(teacher_id):
@@ -271,8 +392,10 @@ def _teacher_course_ids(teacher_id):
 def _visible_course_ids(user):
     if role_name(user) == ADMIN:
         return db.session.scalars(select(Course.id)).all()
-    if role_name(user) == TEACHER:
-        return _teacher_course_ids(user.id)
+    if is_approved_instructor(user):
+        course_ids = set(_teacher_course_ids(user.id))
+        course_ids.update(db.session.scalars(select(Course.id).where(Course.owner_id == user.id)).all())
+        return list(course_ids)
     return approved_student_course_ids() or []
 
 
@@ -299,6 +422,7 @@ def _serialize_enrollment(enrollment):
         "course": _serialize_course(enrollment.course) if enrollment.course else None,
         "status": enrollment.status.value if enrollment.status else None,
         "message": enrollment.message,
+        "review_reason": enrollment.review_reason,
         "reviewed_by": enrollment.reviewed_by,
         "reviewed_at": enrollment.reviewed_at.isoformat() if enrollment.reviewed_at else None,
         "created_at": enrollment.created_at.isoformat() if enrollment.created_at else None,
@@ -339,6 +463,41 @@ def _serialize_lecture(lecture):
 
 def _serialize_user(user):
     return {"id": user.id, "username": user.username, "email": user.email, "full_name": user.full_name}
+
+
+def _resource_type(value):
+    try:
+        return ResourceType(str(value).upper())
+    except (TypeError, ValueError):
+        return None
+
+
+def _serialize_resource_enrollment(enrollment):
+    return {
+        "id": enrollment.id,
+        "student_id": enrollment.student_id,
+        "student": _serialize_user(enrollment.student) if enrollment.student else None,
+        "resource_type": enrollment.resource_type.value if enrollment.resource_type else None,
+        "resource_id": enrollment.resource_id,
+        "resource": _resource_label(enrollment.resource_type, enrollment.resource_id),
+        "status": enrollment.status.value if enrollment.status else None,
+        "message": enrollment.message,
+        "review_reason": enrollment.review_reason,
+        "reviewed_by": enrollment.reviewed_by,
+        "reviewed_at": enrollment.reviewed_at.isoformat() if enrollment.reviewed_at else None,
+        "created_at": enrollment.created_at.isoformat() if enrollment.created_at else None,
+        "updated_at": enrollment.updated_at.isoformat() if enrollment.updated_at else None,
+    }
+
+
+def _resource_label(resource_type, resource_id):
+    if resource_type == ResourceType.BOOK:
+        resource = db.session.get(CourseResource, resource_id)
+        return {"id": resource.id, "title": resource.title} if resource else None
+    if resource_type == ResourceType.SKILL:
+        resource = db.session.get(Internship, resource_id)
+        return {"id": resource.id, "title": resource.title} if resource else None
+    return None
 
 
 def _error(message, status_code):

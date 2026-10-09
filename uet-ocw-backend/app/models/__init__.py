@@ -1,7 +1,7 @@
 from app.models.author import Author
 from app.models.course import Course
 from app.models.department import Department
-from app.models.enrollment import CourseEnrollment, CourseTeachingApplication
+from app.models.enrollment import CourseEnrollment, CourseTeachingApplication, InstructorApplication, ResourceEnrollment
 from app.models.faculty import Faculty
 from app.models.internship import Internship
 from app.models.internship_resource import InternshipResource
@@ -21,6 +21,8 @@ __all__ = [
     "Department",
     "CourseEnrollment",
     "CourseTeachingApplication",
+    "InstructorApplication",
+    "ResourceEnrollment",
     "Faculty",
     "Internship",
     "InternshipResource",

@@ -1,6 +1,7 @@
 import enum
 
 from app.extensions import db,BigIntegerUnsigned
+from app.models.course import AccessLevel
 
 
 class InternshipStatus(enum.Enum):
@@ -59,6 +60,14 @@ class Internship(db.Model):
     eligibility = db.Column(
         db.Text,
         nullable=True,
+    )
+    schedule = db.Column(db.Text, nullable=True)
+    access_level = db.Column(
+        db.Enum(AccessLevel, name="internship_access_level"),
+        nullable=False,
+        default=AccessLevel.PUBLIC,
+        server_default="PUBLIC",
+        index=True,
     )
 
     application_url = db.Column(

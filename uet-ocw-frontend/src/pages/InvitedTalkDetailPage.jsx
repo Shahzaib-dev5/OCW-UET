@@ -18,7 +18,7 @@ export default function InvitedTalkDetailPage() {
         const talkData = await fetchJson(`/invited-talks/${talkId}`)
         setTalk(talkData)
       } catch (loadError) {
-        setError(loadError.message || 'Unable to load invited talk details.')
+        setError(loadError.message || 'Unable to load tech talk details.')
       } finally {
         setLoading(false)
       }
@@ -32,14 +32,14 @@ export default function InvitedTalkDetailPage() {
   }, [])
 
   if (loading) {
-    return <div className="container page-block"><div className="loading-box">Loading invited talk...</div></div>
+    return <div className="container page-block"><div className="loading-box">Loading tech talk...</div></div>
   }
 
   if (error) {
     return (
       <div className="container page-block">
         <div className="alert-box">{error}</div>
-        <Link to="/invited-talks" className="primary-button small">Back to invited talks</Link>
+        <Link to="/invited-talks" className="primary-button small">Back to tech talks</Link>
       </div>
     )
   }
@@ -48,20 +48,20 @@ export default function InvitedTalkDetailPage() {
     return (
       <div className="container page-block">
         <div className="content-panel">
-          <p className="eyebrow">Invited talk not found</p>
-          <h2>We could not find this invited talk.</h2>
-          <Link to="/invited-talks" className="primary-button small">Back to invited talks</Link>
+          <p className="eyebrow">Tech talk not found</p>
+          <h2>We could not find this tech talk.</h2>
+          <Link to="/invited-talks" className="primary-button small">Back to tech talks</Link>
         </div>
       </div>
     )
   }
 
   const departmentName = talk.department?.name || 'Department not specified'
-  const summary = talk.event_title || talk.publication || 'Invited talk details are available from the backend.'
+  const summary = talk.event_title || talk.publication || 'Tech talk details are available from the backend.'
 
   const handleShare = async () => {
     const shareData = {
-      title: talk.talk_title || 'Invited talk',
+      title: talk.talk_title || 'Tech talk',
       text: summary,
       url: window.location.href,
     }
@@ -88,8 +88,8 @@ export default function InvitedTalkDetailPage() {
       <header className="course-detail-hero research-detail-hero">
         <div className="container course-detail-hero-inner">
           <div className="course-detail-summary">
-            <div className="course-detail-badges" aria-label="Invited talk labels">
-              <span>Invited Talk</span>
+            <div className="course-detail-badges" aria-label="Tech talk labels">
+              <span>Tech Talk</span>
               <span>{departmentName}</span>
             </div>
             <h1>{talk.talk_title || 'Untitled talk'}</h1>
@@ -105,7 +105,7 @@ export default function InvitedTalkDetailPage() {
             </div>
           </div>
 
-          <aside className="course-quick-card" aria-label="Invited talk quick facts and actions">
+          <aside className="course-quick-card" aria-label="Tech talk quick facts and actions">
             <dl className="course-quick-facts">
               <div>
                 <dt><Icon />Date</dt>
@@ -138,7 +138,7 @@ export default function InvitedTalkDetailPage() {
       </header>
 
       <div className="container course-detail-layout">
-        <aside className="course-menu" aria-label="Invited talk menu">
+        <aside className="course-menu" aria-label="Tech talk menu">
           <h3>Talk Menu</h3>
           <a href="#talk-details">Details</a>
           <a href="#media">Media</a>

@@ -52,8 +52,7 @@ export default function ResearchPage() {
   }, [departments, selectedFacultyId])
 
   useEffect(() => {
-    if (!selectedFacultyId || !facultyDepartments.length) {
-      setSelectedDepartmentId(null)
+    if (!selectedFacultyId || !selectedDepartmentId) {
       return
     }
 
@@ -115,14 +114,6 @@ export default function ResearchPage() {
           </div>
 
           <form className="course-toolbar" role="search" onSubmit={(event) => event.preventDefault()}>
-            <label className="visually-hidden" htmlFor="research-search">Search research papers</label>
-            <input
-              id="research-search"
-              type="search"
-              value={searchTerm}
-              onChange={(event) => setSearchTerm(event.target.value)}
-              placeholder="Search by title, author, or venue"
-            />
             <select
               aria-label="Faculty"
               value={selectedFacultyId || ''}
@@ -146,6 +137,14 @@ export default function ResearchPage() {
                 <option key={department.id} value={department.id}>{department.name}</option>
               ))}
             </select>
+            <label className="visually-hidden" htmlFor="research-search">Search research papers</label>
+            <input
+              id="research-search"
+              type="search"
+              value={searchTerm}
+              onChange={(event) => setSearchTerm(event.target.value)}
+              placeholder="Search by title, author, or venue"
+            />
           </form>
         </div>
       </header>
