@@ -74,11 +74,13 @@ npm install
 npm run dev
 ```
 
-To point the frontend to a backend URL, create `uet-ocw-frontend/.env`:
+For local development, keep `uet-ocw-frontend/.env` blank so Vite proxies API requests to the local backend:
 
 ```env
-VITE_API_BASE_URL=http://127.0.0.1:5001
+VITE_API_BASE_URL=
 ```
+
+The production frontend build uses `uet-ocw-frontend/.env.production`, currently pointing at `http://10.10.250.163:9999`.
 
 Build the frontend for production:
 

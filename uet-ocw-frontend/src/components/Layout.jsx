@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { NavLink } from 'react-router-dom'
 import { useAuth } from '../auth/AuthContext'
 import uetLogo from '../assets/uet-logo.png'
@@ -8,6 +8,9 @@ export default function Layout({ children }) {
   const { user, logout, isApprovedInstructor, isInstructorMode, setViewMode, isAdmin } = useAuth()
   const displayName = user?.full_name || user?.username || user?.email || 'Profile'
   const [isMenuOpen, setIsMenuOpen] = useState(false)
+  const [isProfileMenuOpen, setIsProfileMenuOpen] = useState(false)
+  const profileMenuRef = useRef(null)
+  const avatarInitial = displayName.trim().charAt(0).toUpperCase() || 'U'
   const navItems = [
     { to: '/', label: 'Home' },
     { to: '/about', label: 'About' },
@@ -23,6 +26,40 @@ export default function Layout({ children }) {
     setViewMode(nextMode)
     setIsMenuOpen(false)
   }
+
+  const closeMenus = () => {
+    setIsMenuOpen(false)
+    setIsProfileMenuOpen(false)
+  }
+
+  const handleLogout = () => {
+    logout()
+    closeMenus()
+  }
+
+  useEffect(() => {
+    if (!isProfileMenuOpen) return undefined
+
+    const handlePointerDown = (event) => {
+      if (profileMenuRef.current && !profileMenuRef.current.contains(event.target)) {
+        setIsProfileMenuOpen(false)
+      }
+    }
+
+    const handleKeyDown = (event) => {
+      if (event.key === 'Escape') {
+        setIsProfileMenuOpen(false)
+      }
+    }
+
+    document.addEventListener('pointerdown', handlePointerDown)
+    document.addEventListener('keydown', handleKeyDown)
+
+    return () => {
+      document.removeEventListener('pointerdown', handlePointerDown)
+      document.removeEventListener('keydown', handleKeyDown)
+    }
+  }, [isProfileMenuOpen])
 
   return (
     <div className="site-shell">
@@ -56,7 +93,7 @@ export default function Layout({ children }) {
                 key={item.to}
                 to={item.to}
                 className={({ isActive }) => (isActive ? 'nav-link active' : 'nav-link')}
-                onClick={() => setIsMenuOpen(false)}
+                onClick={closeMenus}
               >
                 {item.label}
               </NavLink>
@@ -73,19 +110,35 @@ export default function Layout({ children }) {
               </button>
             )}
             {isAdmin && (
-              <NavLink to="/admin" className={({ isActive }) => (isActive ? 'nav-link active' : 'nav-link')} onClick={() => setIsMenuOpen(false)}>
+              <NavLink to="/admin" className={({ isActive }) => (isActive ? 'nav-link active' : 'nav-link')} onClick={closeMenus}>
                 Admin
               </NavLink>
             )}
             {user ? (
-              <>
-                <NavLink to="/account" className={({ isActive }) => (isActive ? 'nav-link active' : 'nav-link')} onClick={() => setIsMenuOpen(false)}>
-                  {displayName}
-                </NavLink>
-                <button type="button" className="nav-link nav-button" onClick={() => { logout(); setIsMenuOpen(false) }}>Logout</button>
-              </>
+              <div className="profile-menu" ref={profileMenuRef}>
+                <button
+                  type="button"
+                  className="profile-avatar-button"
+                  aria-label={`${displayName} account menu`}
+                  aria-haspopup="menu"
+                  aria-expanded={isProfileMenuOpen}
+                  onClick={() => setIsProfileMenuOpen((current) => !current)}
+                >
+                  <span aria-hidden="true">{avatarInitial}</span>
+                </button>
+                {isProfileMenuOpen && (
+                  <div className="profile-dropdown" role="menu">
+                    <NavLink to="/account" className="profile-dropdown-item" role="menuitem" onClick={closeMenus}>
+                      Profile
+                    </NavLink>
+                    <button type="button" className="profile-dropdown-item" role="menuitem" onClick={handleLogout}>
+                      Logout
+                    </button>
+                  </div>
+                )}
+              </div>
             ) : (
-              <NavLink to="/login" className={({ isActive }) => (isActive ? 'nav-link active' : 'nav-link')} onClick={() => setIsMenuOpen(false)}>
+              <NavLink to="/login" className={({ isActive }) => (isActive ? 'nav-link active' : 'nav-link')} onClick={closeMenus}>
                 Login
               </NavLink>
             )}

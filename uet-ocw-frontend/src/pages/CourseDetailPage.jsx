@@ -9,8 +9,7 @@ const menuItems = [
   { href: '#syllabus', label: 'Syllabus' },
   { href: '#calendar', label: 'Calendar' },
   { href: '#materials', label: 'Material/Videos' },
-  { href: '#reading', label: 'Reading' },
-  { href: '#online-resources', label: 'Online Resources' },
+  { href: '#reading', label: 'Reading Resources' },
 ]
 
 export default function CourseDetailPage() {
@@ -25,8 +24,12 @@ export default function CourseDetailPage() {
   const [actionStatus, setActionStatus] = useState('')
   const [resourceForm, setResourceForm] = useState({ title: '', resource_type: 'PDF', description: '', external_url: '' })
   const [resourceFile, setResourceFile] = useState(null)
+  const [resourceFileInputKey, setResourceFileInputKey] = useState(0)
+  const [editingResourceId, setEditingResourceId] = useState(null)
+  const [isResourceFormOpen, setIsResourceFormOpen] = useState(false)
   const [lectureForm, setLectureForm] = useState({ lecture_number: '', title: '', description: '', duration_minutes: '' })
   const [lectureItems, setLectureItems] = useState([])
+  const [deletedLectureResourceIds, setDeletedLectureResourceIds] = useState([])
   const [lectureItemDraft, setLectureItemDraft] = useState({ resource_type: 'PDF', external_url: '', file: null })
   const [lectureFileInputKey, setLectureFileInputKey] = useState(0)
   const [editingLectureId, setEditingLectureId] = useState(null)
@@ -65,13 +68,8 @@ export default function CourseDetailPage() {
   }, [])
 
   const readingResources = useMemo(
-    () => resources.filter((resource) => /book|read|pdf|note|document/i.test(`${resource.resource_type} ${resource.title}`)),
+    () => resources.filter((resource) => resource.lecture_number == null),
     [resources],
-  )
-
-  const onlineResources = useMemo(
-    () => resources.filter((resource) => resource.external_url || !readingResources.includes(resource)),
-    [resources, readingResources],
   )
 
   const resourcesByLectureNumber = useMemo(() => (
@@ -174,11 +172,42 @@ export default function CourseDetailPage() {
     setCourse(refreshedCourse)
   }
 
+  const resetResourceForm = () => {
+    setResourceForm({ title: '', resource_type: 'PDF', description: '', external_url: '' })
+    setResourceFile(null)
+    setEditingResourceId(null)
+    setResourceFileInputKey((current) => current + 1)
+  }
+
+  const openAddResourceForm = () => {
+    resetResourceForm()
+    setIsResourceFormOpen(true)
+  }
+
+  const openEditResourceForm = (resource) => {
+    setEditingResourceId(resource.id)
+    setResourceForm({
+      title: resource.title || '',
+      resource_type: resource.resource_type || 'PDF',
+      description: resource.description || '',
+      external_url: resource.external_url || '',
+    })
+    setResourceFile(null)
+    setResourceFileInputKey((current) => current + 1)
+    setIsResourceFormOpen(true)
+  }
+
+  const closeResourceForm = () => {
+    setIsResourceFormOpen(false)
+    resetResourceForm()
+  }
+
   const submitResource = async (event) => {
     event.preventDefault()
+    const isEditingResource = Boolean(editingResourceId)
     try {
       setUploading(true)
-      setActionStatus('Uploading resource...')
+      setActionStatus(isEditingResource ? 'Updating resource...' : 'Uploading resource...')
       let fileUrlValue = ''
       let fileSize = null
       let mimeType = ''
@@ -188,26 +217,28 @@ export default function CourseDetailPage() {
         fileSize = uploaded.size || null
         mimeType = uploaded.mime_type || ''
       }
-      await sendJson('/course-resources', {
+      await sendJson(isEditingResource ? `/course-resources/${editingResourceId}` : '/course-resources', {
+        method: isEditingResource ? 'PATCH' : 'POST',
         body: {
           course_id: Number(courseId),
           title: resourceForm.title,
           resource_type: resourceForm.resource_type,
           description: resourceForm.description || null,
           external_url: resourceForm.external_url || null,
-          file_url: fileUrlValue || null,
-          file_size: fileSize,
-          mime_type: mimeType || null,
+          ...(resourceFile ? {
+            file_url: fileUrlValue || null,
+            file_size: fileSize,
+            mime_type: mimeType || null,
+          } : {}),
           access_level: course.access_level || 'PUBLIC',
           is_active: true,
         },
       })
-      setResourceForm({ title: '', resource_type: 'PDF', description: '', external_url: '' })
-      setResourceFile(null)
+      closeResourceForm()
       await reloadMaterials()
-      setActionStatus('Resource uploaded.')
+      setActionStatus(isEditingResource ? 'Resource updated.' : 'Resource uploaded.')
     } catch (uploadError) {
-      setActionStatus(uploadError.message || 'Unable to upload resource.')
+      setActionStatus(uploadError.message || 'Unable to save resource.')
     } finally {
       setUploading(false)
     }
@@ -217,12 +248,14 @@ export default function CourseDetailPage() {
     setEditingLectureId(null)
     setLectureForm({ lecture_number: '', title: '', description: '', duration_minutes: '' })
     setLectureItems([])
+    setDeletedLectureResourceIds([])
     setLectureItemDraft({ resource_type: 'PDF', external_url: '', file: null })
     setLectureFileInputKey((current) => current + 1)
     setIsLectureFormOpen(true)
   }
 
   const openEditLectureForm = (lecture) => {
+    const existingItems = (resourcesByLectureNumber[String(lecture.lecture_number)] || []).map(resourceToLectureItem)
     setEditingLectureId(lecture.id)
     setLectureForm({
       lecture_number: String(lecture.lecture_number || ''),
@@ -230,7 +263,8 @@ export default function CourseDetailPage() {
       description: lecture.description || '',
       duration_minutes: lecture.duration_minutes == null ? '' : String(lecture.duration_minutes),
     })
-    setLectureItems([])
+    setLectureItems(existingItems)
+    setDeletedLectureResourceIds([])
     setLectureItemDraft({ resource_type: 'PDF', external_url: '', file: null })
     setLectureFileInputKey((current) => current + 1)
     setIsLectureFormOpen(true)
@@ -241,6 +275,7 @@ export default function CourseDetailPage() {
     setEditingLectureId(null)
     setLectureForm({ lecture_number: '', title: '', description: '', duration_minutes: '' })
     setLectureItems([])
+    setDeletedLectureResourceIds([])
     setLectureItemDraft({ resource_type: 'PDF', external_url: '', file: null })
     setLectureFileInputKey((current) => current + 1)
   }
@@ -267,7 +302,11 @@ export default function CourseDetailPage() {
   }
 
   const removeLectureItem = (itemId) => {
-    setLectureItems((current) => current.filter((item) => item.id !== itemId))
+    const item = lectureItems.find((entry) => entry.id === itemId)
+    if (item?.existingResourceId) {
+      setDeletedLectureResourceIds((ids) => [...new Set([...ids, item.existingResourceId])])
+    }
+    setLectureItems((current) => current.filter((entry) => entry.id !== itemId))
   }
 
   const submitLecture = async (event) => {
@@ -278,7 +317,8 @@ export default function CourseDetailPage() {
       const lectureNumber = Number(lectureForm.lecture_number)
       const existingLecture = lectures.find((lecture) => String(lecture.lecture_number) === String(lectureNumber))
       const targetLectureId = editingLectureId || existingLecture?.id
-      const uploadedItems = await uploadLectureItems(lectureItems, `courses/${courseId}/lectures`)
+      const existingItems = lectureItems.filter((item) => item.existingResourceId)
+      const uploadedItems = await uploadLectureItems(lectureItems.filter((item) => !item.existingResourceId), `courses/${courseId}/lectures`)
       const primaryUrls = targetLectureId ? {} : getPrimaryLectureUrls(uploadedItems)
 
       await sendJson(targetLectureId ? `/lectures/${targetLectureId}` : '/lectures', {
@@ -301,6 +341,13 @@ export default function CourseDetailPage() {
         title: lectureForm.title,
         items: uploadedItems,
       })
+      await updateExistingLectureResources({
+        courseId,
+        course,
+        lectureNumber,
+        items: existingItems,
+      })
+      await Promise.all(deletedLectureResourceIds.map((resourceId) => deleteJson(`/course-resources/${resourceId}`)))
 
       await reloadMaterials()
       closeLectureForm()
@@ -550,31 +597,42 @@ export default function CourseDetailPage() {
             />
           )}
 
-          {canManageCourse && isInstructorMode && (
-            <InstructorMaterialPanel
+          {canManageCourse && isInstructorMode && isResourceFormOpen && (
+            <ResourceFormDialog
+              editing={Boolean(editingResourceId)}
               resourceForm={resourceForm}
               setResourceForm={setResourceForm}
               setResourceFile={setResourceFile}
+              resourceFileInputKey={resourceFileInputKey}
               uploading={uploading}
-              submitResource={submitResource}
+              onSubmit={submitResource}
+              onClose={closeResourceForm}
             />
           )}
 
           <section id="reading" className="course-section">
-            <h3>Reading</h3>
+            <h3 className="section-heading-with-action">
+              <span>Reading Resources</span>
+              {canManageCourse && isInstructorMode && (
+                <button
+                  type="button"
+                  className="lecture-add-button"
+                  aria-label="Add reading resource"
+                  onClick={openAddResourceForm}
+                >
+                  <PlusIcon />
+                </button>
+              )}
+            </h3>
             {!canAccessMaterials ? (
               <LockNotice user={user} enrollment={enrollment} />
             ) : (
-              <ResourceRows resources={readingResources} emptyText="No reading resources are available yet." />
-            )}
-          </section>
-
-          <section id="online-resources" className="course-section">
-            <h3>Online Resources</h3>
-            {!canAccessMaterials ? (
-              <LockNotice user={user} enrollment={enrollment} />
-            ) : (
-              <ResourceRows resources={onlineResources} emptyText="No online resources are available yet." />
+              <ResourceRows
+                resources={readingResources}
+                emptyText="No reading resources are available yet."
+                canManage={canManageCourse && isInstructorMode}
+                onEdit={openEditResourceForm}
+              />
             )}
           </section>
         </main>
@@ -583,19 +641,32 @@ export default function CourseDetailPage() {
   )
 }
 
-function InstructorMaterialPanel({
+function ResourceFormDialog({
+  editing,
   resourceForm,
   setResourceForm,
   setResourceFile,
+  resourceFileInputKey,
   uploading,
-  submitResource,
+  onSubmit,
+  onClose,
 }) {
   return (
-    <section id="instructor-materials" className="course-section instructor-material-panel">
-      <h3>Instructor Uploads</h3>
-      <div className="instructor-upload-grid resource-only">
-        <form className="instructor-upload-form" onSubmit={submitResource}>
-          <h4>Add resource</h4>
+    <div className="lecture-dialog-backdrop" role="presentation" onMouseDown={onClose}>
+      <section
+        className="lecture-dialog"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="resource-dialog-title"
+        onMouseDown={(event) => event.stopPropagation()}
+      >
+        <div className="lecture-dialog-header">
+          <h3 id="resource-dialog-title">{editing ? 'Edit reading resource' : 'Add reading resource'}</h3>
+          <button type="button" className="dialog-close-button" aria-label="Close resource form" onClick={onClose}>
+            <CloseIcon />
+          </button>
+        </div>
+        <form className="instructor-upload-form lecture-dialog-form" onSubmit={onSubmit}>
           <label>
             Title
             <input value={resourceForm.title} onChange={(event) => setResourceForm({ ...resourceForm, title: event.target.value })} required />
@@ -618,16 +689,19 @@ function InstructorMaterialPanel({
           </label>
           <label>
             File
-            <input type="file" onChange={(event) => setResourceFile(event.target.files?.[0] || null)} />
+            <input key={resourceFileInputKey} type="file" onChange={(event) => setResourceFile(event.target.files?.[0] || null)} />
           </label>
           <label>
             External link
             <input value={resourceForm.external_url} onChange={(event) => setResourceForm({ ...resourceForm, external_url: event.target.value })} />
           </label>
-          <button className="primary-button auth-submit" disabled={uploading}>Upload Resource</button>
+          <div className="lecture-dialog-actions wide">
+            <button className="primary-button auth-submit" disabled={uploading}>{uploading ? 'Saving...' : editing ? 'Update Resource' : 'Upload Resource'}</button>
+            <button type="button" className="secondary-action-button" onClick={onClose}>Cancel</button>
+          </div>
         </form>
-      </div>
-    </section>
+      </section>
+    </div>
   )
 }
 
@@ -706,7 +780,7 @@ function LectureFormDialog({
                 <div className="lecture-stack-item" key={item.id}>
                   <span>{index + 1}</span>
                   <strong>{formatMaterialType(item.resource_type)}</strong>
-                  <small>{item.file?.name || item.external_url}</small>
+                  <small>{getLectureItemSummary(item)}</small>
                   <button type="button" aria-label="Remove material" onClick={() => removeLectureItem(item.id)}>
                     <CloseIcon />
                   </button>
@@ -808,6 +882,23 @@ function LectureResourceLinks({ resources }) {
   })
 }
 
+function resourceToLectureItem(resource) {
+  return {
+    id: `resource-${resource.id}`,
+    existingResourceId: resource.id,
+    resource_type: resource.resource_type || 'PDF',
+    title: resource.title || '',
+    file_url: resource.file_url || '',
+    external_url: resource.external_url || '',
+    file_size: resource.file_size || null,
+    mime_type: resource.mime_type || null,
+  }
+}
+
+function getLectureItemSummary(item) {
+  return item.file?.name || item.title || item.external_url || fileNameFromUrl(item.file_url, 'Saved resource')
+}
+
 async function uploadLectureItems(items, folder) {
   const uploadedItems = []
   for (const item of items) {
@@ -849,6 +940,26 @@ async function saveLectureResources({ courseId, course, lectureNumber, title, it
   await Promise.all(resourceRequests)
 }
 
+async function updateExistingLectureResources({ courseId, course, lectureNumber, items }) {
+  const updateRequests = items.map((item, index) => sendJson(`/course-resources/${item.existingResourceId}`, {
+    method: 'PATCH',
+    body: {
+      course_id: Number(courseId),
+      resource_type: item.resource_type,
+      file_url: item.file_url || null,
+      external_url: item.external_url || null,
+      file_size: item.file_size || null,
+      mime_type: item.mime_type || null,
+      lecture_number: lectureNumber,
+      display_order: index + 1,
+      access_level: course.access_level || 'PUBLIC',
+      is_active: true,
+    },
+  }))
+
+  await Promise.all(updateRequests)
+}
+
 function getPrimaryLectureUrls(items) {
   const firstVideo = items.find((item) => item.resource_type === 'VIDEO' && (item.file_url || item.external_url))
   const firstPresentation = items.find((item) => item.resource_type === 'POWERPOINT' && (item.file_url || item.external_url))
@@ -880,7 +991,7 @@ function formatMaterialType(type) {
   return 'File'
 }
 
-function ResourceRows({ resources, emptyText }) {
+function ResourceRows({ resources, emptyText, canManage = false, onEdit }) {
   if (!resources.length) return <p className="empty-state">{emptyText}</p>
 
   return (
@@ -899,6 +1010,16 @@ function ResourceRows({ resources, emptyText }) {
                   <a href={fileUrl(resource.file_url)} target="_blank" rel="noreferrer">view</a>
                   <a href={fileUrl(resource.file_url)} download={fileNameFromUrl(resource.file_url, resource.title)}>download</a>
                 </>
+              )}
+              {canManage && (
+                <button
+                  type="button"
+                  className="lecture-edit-button resource-edit-button"
+                  aria-label={`Edit ${resource.title}`}
+                  onClick={() => onEdit(resource)}
+                >
+                  <EditIcon />
+                </button>
               )}
             </td>
           </tr>

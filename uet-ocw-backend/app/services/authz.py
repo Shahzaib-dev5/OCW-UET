@@ -204,6 +204,8 @@ def can_view_book_learning(book_id):
         return True
     if book.course_id and can_manage_course(book.course_id):
         return True
+    if book.course_id is None and is_approved_instructor(user):
+        return True
     enrollment = resource_enrollment_for_user(ResourceType.BOOK, book_id, user)
     return enrollment is not None and enrollment.status == ApplicationStatus.APPROVED
 

@@ -21,6 +21,7 @@ __pycache__/
 .env
 .env.*
 !.env.example
+!uet-ocw-frontend/.env.production
 *.local
 
 # Runtime uploads and generated media

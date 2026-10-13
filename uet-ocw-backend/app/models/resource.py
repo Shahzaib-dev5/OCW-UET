@@ -31,7 +31,17 @@ class CourseResource(db.Model):
             name="fk_course_resources_course",
             ondelete="CASCADE",
         ),
-        nullable=False,
+        nullable=True,
+        index=True,
+    )
+    owner_id = db.Column(
+        BigIntegerUnsigned,
+        db.ForeignKey(
+            "users.id",
+            name="fk_course_resources_owner",
+            ondelete="SET NULL",
+        ),
+        nullable=True,
         index=True,
     )
     access_level = db.Column(
@@ -68,6 +78,11 @@ class CourseResource(db.Model):
 
     external_url = db.Column(
         db.String(1000),
+        nullable=True,
+    )
+
+    thumbnail = db.Column(
+        db.String(500),
         nullable=True,
     )
 
@@ -113,6 +128,8 @@ class CourseResource(db.Model):
         "Course",
         back_populates="resources",
     )
+
+    owner = db.relationship("User")
 
     def __repr__(self):
         return f"<CourseResource {self.title}>"

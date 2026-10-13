@@ -171,6 +171,102 @@ p {
   cursor: pointer;
 }
 
+.profile-menu {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+}
+
+.profile-avatar-button {
+  width: 38px;
+  height: 38px;
+  border: 1px solid #d8deea;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #ffffff, #f4f8ff);
+  color: var(--uet-navy);
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease, transform 0.2s ease;
+}
+
+.profile-avatar-button span {
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  background: var(--uet-navy);
+  color: #ffffff;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.9rem;
+  font-weight: 700;
+  line-height: 1;
+}
+
+.profile-avatar-button:hover,
+.profile-avatar-button[aria-expanded='true'] {
+  border-color: #0f86dc;
+  box-shadow: 0 8px 20px rgba(20, 8, 97, 0.14);
+  transform: translateY(-1px);
+}
+
+.profile-avatar-button:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 3px rgba(15, 134, 220, 0.22);
+}
+
+.profile-dropdown {
+  position: absolute;
+  top: calc(100% + 10px);
+  right: 0;
+  z-index: 60;
+  min-width: 160px;
+  padding: 6px;
+  border: 1px solid var(--uet-line);
+  border-radius: 8px;
+  background: #ffffff;
+  box-shadow: 0 18px 34px rgba(20, 8, 97, 0.16);
+}
+
+.profile-dropdown::before {
+  content: '';
+  position: absolute;
+  top: -6px;
+  right: 14px;
+  width: 10px;
+  height: 10px;
+  border-left: 1px solid var(--uet-line);
+  border-top: 1px solid var(--uet-line);
+  background: #ffffff;
+  transform: rotate(45deg);
+}
+
+.profile-dropdown-item {
+  width: 100%;
+  border: 0;
+  border-radius: 6px;
+  background: transparent;
+  color: #333333;
+  cursor: pointer;
+  display: block;
+  font-size: 0.92rem;
+  font-weight: 500;
+  line-height: 1.2;
+  padding: 10px 12px;
+  text-align: left;
+  text-decoration: none;
+}
+
+.profile-dropdown-item:hover,
+.profile-dropdown-item:focus-visible {
+  background: #eef6fd;
+  color: #0f86dc;
+  outline: none;
+}
+
 .nav-mode-toggle {
   align-items: center;
   background: #f7f8fb;
@@ -2562,6 +2658,13 @@ p {
   margin: 0 0 18px;
 }
 
+.section-heading-with-action {
+  align-items: center;
+  display: flex;
+  gap: 12px;
+  justify-content: space-between;
+}
+
 .course-intro-grid {
   display: grid;
   grid-template-columns: minmax(240px, 420px) minmax(0, 1fr);
@@ -2691,10 +2794,23 @@ p {
   align-items: center;
   display: flex;
   gap: 10px;
+}
+
+.materials-heading-cell {
   justify-content: space-between;
 }
 
+.lecture-title-cell {
+  color: inherit;
+  justify-content: flex-start;
+  margin-top: 0;
+  padding-top: 28px;
+  position: relative;
+}
+
 .lecture-title-cell > span {
+  color: inherit;
+  margin-top: 0;
   min-width: 0;
 }
 
@@ -2738,8 +2854,24 @@ p {
   border-radius: 6px;
   color: #0f75bc;
   flex: 0 0 auto;
-  height: 30px;
-  width: 30px;
+  height: 26px;
+  left: 0;
+  position: absolute;
+  top: 0;
+  width: 26px;
+}
+
+.lecture-edit-button svg {
+  height: 15px;
+  width: 15px;
+}
+
+.resource-edit-button {
+  height: 26px;
+  margin-left: 4px;
+  position: static;
+  vertical-align: middle;
+  width: 26px;
 }
 
 .lecture-delete-button {
@@ -3039,6 +3171,35 @@ p {
 
 .book-form {
   grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.books-result-actions {
+  align-items: center;
+  display: flex;
+  gap: 12px;
+}
+
+.book-card-controls {
+  display: flex;
+  gap: 6px;
+  left: auto;
+  position: absolute;
+  right: 10px;
+  top: 10px;
+  z-index: 2;
+}
+
+.book-edit-button,
+.book-delete-button {
+  left: auto;
+  margin: 0;
+  position: static;
+  top: auto;
+}
+
+.book-delete-button:disabled {
+  cursor: wait;
+  opacity: 0.65;
 }
 
 .book-row {
@@ -4133,6 +4294,27 @@ p {
   .nav-mode-toggle {
     justify-content: flex-start;
     width: 100%;
+  }
+
+  .profile-menu {
+    width: 100%;
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .profile-avatar-button {
+    margin-left: 2px;
+  }
+
+  .profile-dropdown {
+    position: static;
+    width: 100%;
+    margin-top: 8px;
+    box-shadow: none;
+  }
+
+  .profile-dropdown::before {
+    display: none;
   }
 
   .footer-main {
