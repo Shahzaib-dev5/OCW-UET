@@ -3847,6 +3847,19 @@ p {
   gap: 6px;
 }
 
+.instructor-upload-form label.checkbox-field {
+  align-items: center;
+  display: flex;
+  flex-direction: row;
+  gap: 10px;
+  justify-content: flex-start;
+}
+
+.instructor-upload-form label.checkbox-field input {
+  flex: 0 0 auto;
+  width: 18px;
+}
+
 .instructor-upload-form label.wide,
 .instructor-upload-form button {
   grid-column: 1 / -1;

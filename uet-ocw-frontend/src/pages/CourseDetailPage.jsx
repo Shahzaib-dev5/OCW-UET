@@ -22,7 +22,7 @@ export default function CourseDetailPage() {
   const [error, setError] = useState('')
   const [shareStatus, setShareStatus] = useState('')
   const [actionStatus, setActionStatus] = useState('')
-  const [resourceForm, setResourceForm] = useState({ title: '', resource_type: 'PDF', description: '', external_url: '' })
+  const [resourceForm, setResourceForm] = useState({ title: '', resource_type: 'PDF', description: '', external_url: '', use_external_link: false })
   const [resourceFile, setResourceFile] = useState(null)
   const [resourceFileInputKey, setResourceFileInputKey] = useState(0)
   const [editingResourceId, setEditingResourceId] = useState(null)
@@ -30,7 +30,7 @@ export default function CourseDetailPage() {
   const [lectureForm, setLectureForm] = useState({ lecture_number: '', title: '', description: '', duration_minutes: '' })
   const [lectureItems, setLectureItems] = useState([])
   const [deletedLectureResourceIds, setDeletedLectureResourceIds] = useState([])
-  const [lectureItemDraft, setLectureItemDraft] = useState({ resource_type: 'PDF', external_url: '', file: null })
+  const [lectureItemDraft, setLectureItemDraft] = useState({ resource_type: 'PDF', external_url: '', file: null, use_external_link: false })
   const [lectureFileInputKey, setLectureFileInputKey] = useState(0)
   const [editingLectureId, setEditingLectureId] = useState(null)
   const [isLectureFormOpen, setIsLectureFormOpen] = useState(false)
@@ -173,7 +173,7 @@ export default function CourseDetailPage() {
   }
 
   const resetResourceForm = () => {
-    setResourceForm({ title: '', resource_type: 'PDF', description: '', external_url: '' })
+    setResourceForm({ title: '', resource_type: 'PDF', description: '', external_url: '', use_external_link: false })
     setResourceFile(null)
     setEditingResourceId(null)
     setResourceFileInputKey((current) => current + 1)
@@ -191,6 +191,7 @@ export default function CourseDetailPage() {
       resource_type: resource.resource_type || 'PDF',
       description: resource.description || '',
       external_url: resource.external_url || '',
+      use_external_link: resource.resource_type === 'LINK' || Boolean(resource.external_url && !resource.file_url),
     })
     setResourceFile(null)
     setResourceFileInputKey((current) => current + 1)
@@ -205,6 +206,15 @@ export default function CourseDetailPage() {
   const submitResource = async (event) => {
     event.preventDefault()
     const isEditingResource = Boolean(editingResourceId)
+    const usesExternalLink = shouldUseExternalLink(resourceForm)
+    if (usesExternalLink && !resourceForm.external_url.trim()) {
+      setActionStatus('Add the external link first.')
+      return
+    }
+    if (!usesExternalLink && !isEditingResource && !resourceFile) {
+      setActionStatus('Choose a file first.')
+      return
+    }
     try {
       setUploading(true)
       setActionStatus(isEditingResource ? 'Updating resource...' : 'Uploading resource...')
@@ -224,7 +234,7 @@ export default function CourseDetailPage() {
           title: resourceForm.title,
           resource_type: resourceForm.resource_type,
           description: resourceForm.description || null,
-          external_url: resourceForm.external_url || null,
+          external_url: shouldUseExternalLink(resourceForm) ? resourceForm.external_url || null : null,
           ...(resourceFile ? {
             file_url: fileUrlValue || null,
             file_size: fileSize,
@@ -249,7 +259,7 @@ export default function CourseDetailPage() {
     setLectureForm({ lecture_number: '', title: '', description: '', duration_minutes: '' })
     setLectureItems([])
     setDeletedLectureResourceIds([])
-    setLectureItemDraft({ resource_type: 'PDF', external_url: '', file: null })
+    setLectureItemDraft({ resource_type: 'PDF', external_url: '', file: null, use_external_link: false })
     setLectureFileInputKey((current) => current + 1)
     setIsLectureFormOpen(true)
   }
@@ -265,7 +275,7 @@ export default function CourseDetailPage() {
     })
     setLectureItems(existingItems)
     setDeletedLectureResourceIds([])
-    setLectureItemDraft({ resource_type: 'PDF', external_url: '', file: null })
+    setLectureItemDraft({ resource_type: 'PDF', external_url: '', file: null, use_external_link: false })
     setLectureFileInputKey((current) => current + 1)
     setIsLectureFormOpen(true)
   }
@@ -276,15 +286,20 @@ export default function CourseDetailPage() {
     setLectureForm({ lecture_number: '', title: '', description: '', duration_minutes: '' })
     setLectureItems([])
     setDeletedLectureResourceIds([])
-    setLectureItemDraft({ resource_type: 'PDF', external_url: '', file: null })
+    setLectureItemDraft({ resource_type: 'PDF', external_url: '', file: null, use_external_link: false })
     setLectureFileInputKey((current) => current + 1)
   }
 
   const addLectureItem = () => {
+    const usesExternalLink = shouldUseExternalLink(lectureItemDraft)
     const externalUrl = lectureItemDraft.external_url.trim()
     const file = lectureItemDraft.file
-    if (!file && !externalUrl) {
-      setActionStatus('Choose a file or add an external link first.')
+    if (usesExternalLink && !externalUrl) {
+      setActionStatus('Add the external link first.')
+      return
+    }
+    if (!usesExternalLink && !file) {
+      setActionStatus('Choose a file first.')
       return
     }
 
@@ -293,11 +308,16 @@ export default function CourseDetailPage() {
       {
         id: `${Date.now()}-${current.length}`,
         resource_type: lectureItemDraft.resource_type,
-        file,
-        external_url: externalUrl,
+        file: usesExternalLink ? null : file,
+        external_url: usesExternalLink ? externalUrl : '',
       },
     ])
-    setLectureItemDraft({ resource_type: lectureItemDraft.resource_type, external_url: '', file: null })
+    setLectureItemDraft({
+      resource_type: lectureItemDraft.resource_type,
+      external_url: '',
+      file: null,
+      use_external_link: lectureItemDraft.use_external_link,
+    })
     setLectureFileInputKey((current) => current + 1)
   }
 
@@ -651,6 +671,19 @@ function ResourceFormDialog({
   onSubmit,
   onClose,
 }) {
+  const usesExternalLink = shouldUseExternalLink(resourceForm)
+  const showExternalToggle = !isLinkResource(resourceForm.resource_type)
+
+  const updateResourceType = (resourceType) => {
+    setResourceFile(null)
+    setResourceForm({
+      ...resourceForm,
+      resource_type: resourceType,
+      external_url: '',
+      use_external_link: false,
+    })
+  }
+
   return (
     <div className="lecture-dialog-backdrop" role="presentation" onMouseDown={onClose}>
       <section
@@ -673,7 +706,7 @@ function ResourceFormDialog({
           </label>
           <label>
             Type
-            <select value={resourceForm.resource_type} onChange={(event) => setResourceForm({ ...resourceForm, resource_type: event.target.value })}>
+            <select value={resourceForm.resource_type} onChange={(event) => updateResourceType(event.target.value)}>
               <option value="PDF">PDF</option>
               <option value="POWERPOINT">PowerPoint</option>
               <option value="VIDEO">Video</option>
@@ -687,14 +720,30 @@ function ResourceFormDialog({
             Description
             <textarea value={resourceForm.description} onChange={(event) => setResourceForm({ ...resourceForm, description: event.target.value })} />
           </label>
-          <label>
-            File
-            <input key={resourceFileInputKey} type="file" onChange={(event) => setResourceFile(event.target.files?.[0] || null)} />
-          </label>
-          <label>
-            External link
-            <input value={resourceForm.external_url} onChange={(event) => setResourceForm({ ...resourceForm, external_url: event.target.value })} />
-          </label>
+          {showExternalToggle && (
+            <label className="checkbox-field resource-source-toggle wide">
+              <input
+                type="checkbox"
+                checked={resourceForm.use_external_link}
+                onChange={(event) => {
+                  setResourceFile(null)
+                  setResourceForm({ ...resourceForm, use_external_link: event.target.checked, external_url: '' })
+                }}
+              />
+              Upload from external link
+            </label>
+          )}
+          {usesExternalLink ? (
+            <label className="wide">
+              External link
+              <input value={resourceForm.external_url} onChange={(event) => setResourceForm({ ...resourceForm, external_url: event.target.value })} placeholder="https://example.com/resource" />
+            </label>
+          ) : (
+            <label>
+              Upload
+              <input key={`${resourceFileInputKey}-${resourceForm.resource_type}-${resourceForm.use_external_link}`} type="file" onChange={(event) => setResourceFile(event.target.files?.[0] || null)} />
+            </label>
+          )}
           <div className="lecture-dialog-actions wide">
             <button className="primary-button auth-submit" disabled={uploading}>{uploading ? 'Saving...' : editing ? 'Update Resource' : 'Upload Resource'}</button>
             <button type="button" className="secondary-action-button" onClick={onClose}>Cancel</button>
@@ -719,6 +768,18 @@ function LectureFormDialog({
   onSubmit,
   onClose,
 }) {
+  const usesExternalLink = shouldUseExternalLink(lectureItemDraft)
+  const showExternalToggle = !isLinkResource(lectureItemDraft.resource_type)
+
+  const updateDraftType = (resourceType) => {
+    setLectureItemDraft({
+      resource_type: resourceType,
+      external_url: '',
+      file: null,
+      use_external_link: false,
+    })
+  }
+
   return (
     <div className="lecture-dialog-backdrop" role="presentation" onMouseDown={onClose}>
       <section
@@ -754,7 +815,7 @@ function LectureFormDialog({
           <div className="lecture-material-builder">
             <label>
               Type
-              <select value={lectureItemDraft.resource_type} onChange={(event) => setLectureItemDraft({ ...lectureItemDraft, resource_type: event.target.value })}>
+              <select value={lectureItemDraft.resource_type} onChange={(event) => updateDraftType(event.target.value)}>
                 <option value="VIDEO">Video lecture</option>
                 <option value="POWERPOINT">PPT / slides</option>
                 <option value="PDF">PDF</option>
@@ -762,14 +823,32 @@ function LectureFormDialog({
                 <option value="LINK">Link</option>
               </select>
             </label>
-            <label>
-              Upload
-              <input key={lectureFileInputKey} type="file" onChange={(event) => setLectureItemDraft({ ...lectureItemDraft, file: event.target.files?.[0] || null })} />
-            </label>
-            <label className="wide">
-              External link
-              <input value={lectureItemDraft.external_url} onChange={(event) => setLectureItemDraft({ ...lectureItemDraft, external_url: event.target.value })} placeholder="https://example.com/lecture-resource" />
-            </label>
+            {showExternalToggle && (
+              <label className="checkbox-field resource-source-toggle">
+                <input
+                  type="checkbox"
+                  checked={lectureItemDraft.use_external_link}
+                  onChange={(event) => setLectureItemDraft({
+                    ...lectureItemDraft,
+                    use_external_link: event.target.checked,
+                    external_url: '',
+                    file: null,
+                  })}
+                />
+                Upload from external link
+              </label>
+            )}
+            {usesExternalLink ? (
+              <label className="wide">
+                External link
+                <input value={lectureItemDraft.external_url} onChange={(event) => setLectureItemDraft({ ...lectureItemDraft, external_url: event.target.value })} placeholder="https://example.com/lecture-resource" />
+              </label>
+            ) : (
+              <label>
+                Upload
+                <input key={`${lectureFileInputKey}-${lectureItemDraft.resource_type}-${lectureItemDraft.use_external_link}`} type="file" onChange={(event) => setLectureItemDraft({ ...lectureItemDraft, file: event.target.files?.[0] || null })} />
+              </label>
+            )}
             <button type="button" className="secondary-action-button lecture-stack-add" onClick={addLectureItem}>
               Add to Stack
             </button>
@@ -897,6 +976,14 @@ function resourceToLectureItem(resource) {
 
 function getLectureItemSummary(item) {
   return item.file?.name || item.title || item.external_url || fileNameFromUrl(item.file_url, 'Saved resource')
+}
+
+function isLinkResource(resourceType) {
+  return String(resourceType || '').toUpperCase() === 'LINK'
+}
+
+function shouldUseExternalLink(resource) {
+  return isLinkResource(resource.resource_type) || Boolean(resource.use_external_link)
 }
 
 async function uploadLectureItems(items, folder) {
