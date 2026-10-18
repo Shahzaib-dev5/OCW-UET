@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import { useAuth } from '../auth/AuthContext'
+import CourseDetailsDialog from '../components/CourseDetailsDialog'
 import TitleImageFallback from '../components/TitleImageFallback'
 import { deleteJson, fetchJson, fileNameFromUrl, fileUrl, sendJson, uploadFile } from '../data/api'
 
@@ -22,6 +23,8 @@ export default function CourseDetailPage() {
   const [error, setError] = useState('')
   const [shareStatus, setShareStatus] = useState('')
   const [actionStatus, setActionStatus] = useState('')
+  const [courseDetailsField, setCourseDetailsField] = useState(null)
+  const [courseDetailsStatus, setCourseDetailsStatus] = useState('')
   const [resourceForm, setResourceForm] = useState({ title: '', resource_type: 'PDF', description: '', external_url: '', use_external_link: false })
   const [resourceFile, setResourceFile] = useState(null)
   const [resourceFileInputKey, setResourceFileInputKey] = useState(0)
@@ -42,6 +45,8 @@ export default function CourseDetailPage() {
       try {
         setLoading(true)
         setError('')
+        setCourseDetailsField(null)
+        setCourseDetailsStatus('')
 
         const courseData = await fetchJson(`/courses/${courseId}`)
         const [resourceResult, lectureResult] = await Promise.allSettled([
@@ -123,6 +128,11 @@ export default function CourseDetailPage() {
   const canManageCourse = Boolean(course.can_manage)
   const enrollment = course.enrollment
   const scheduleText = String(course.schedule || '').trim()
+
+  const openCourseDetails = (field = 'title') => {
+    setCourseDetailsStatus('')
+    setCourseDetailsField(field)
+  }
 
   const handleShare = async () => {
     const shareData = {
@@ -463,8 +473,17 @@ export default function CourseDetailPage() {
         </aside>
 
         <main className="course-detail-content">
+          {courseDetailsStatus && <p className="success-box" role="status">{courseDetailsStatus}</p>}
           <section id="introduction" className="course-section">
-            <h3>Course Introduction</h3>
+            <h3 className="section-heading-with-action">
+              <span>Course Introduction</span>
+              {canManageCourse && isInstructorMode && (
+                <button type="button" className="secondary-action-button course-details-edit-button" onClick={() => openCourseDetails()}>
+                  <EditIcon />
+                  Edit course details
+                </button>
+              )}
+            </h3>
             <div className="course-intro-grid">
               <figure className="course-intro-media">
                 <TitleImageFallback
@@ -483,13 +502,27 @@ export default function CourseDetailPage() {
           </section>
 
           <section id="syllabus" className="course-section">
-            <h3>Syllabus</h3>
+            <h3 className="section-heading-with-action">
+              <span>Syllabus</span>
+              {canManageCourse && isInstructorMode && (
+                <button type="button" className="lecture-edit-button resource-edit-button" aria-label="Edit syllabus" onClick={() => openCourseDetails('syllabus')}>
+                  <EditIcon />
+                </button>
+              )}
+            </h3>
             <div className="section-rule" />
-            <p className="section-copy">{course.syllabus || course.short_description || 'Syllabus details can be added from the admin course form.'}</p>
+            <p className="section-copy">{course.syllabus || course.short_description || 'No syllabus has been added yet.'}</p>
           </section>
 
           <section id="calendar" className="course-section">
-            <h3>Course Calendar</h3>
+            <h3 className="section-heading-with-action">
+              <span>Course Calendar</span>
+              {canManageCourse && isInstructorMode && (
+                <button type="button" className="lecture-edit-button resource-edit-button" aria-label="Edit course calendar" onClick={() => openCourseDetails('schedule')}>
+                  <EditIcon />
+                </button>
+              )}
+            </h3>
             {scheduleText ? (
               <p className="section-copy">{scheduleText}</p>
             ) : (
@@ -599,6 +632,19 @@ export default function CourseDetailPage() {
               </table>
             )}
           </section>
+
+          {canManageCourse && isInstructorMode && courseDetailsField && (
+            <CourseDetailsDialog
+              course={course}
+              initialField={courseDetailsField}
+              onClose={() => setCourseDetailsField(null)}
+              onSaved={(saved) => {
+                setCourse(saved)
+                setCourseDetailsField(null)
+                setCourseDetailsStatus('Course details updated.')
+              }}
+            />
+          )}
 
           {canManageCourse && isInstructorMode && isLectureFormOpen && (
             <LectureFormDialog

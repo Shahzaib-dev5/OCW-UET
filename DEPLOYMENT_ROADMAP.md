@@ -141,7 +141,7 @@ Open:
 https://YOUR-BACKEND.onrender.com/admin/login
 ```
 
-Create the first admin if needed.
+Sign in with an admin account that has already been provisioned.
 
 Then open:
 
@@ -227,7 +227,7 @@ Frontend loads but data is empty:
 Admin login fails:
 
 - Confirm database was imported.
-- Use `/admin/login` first admin setup if no admin exists.
+- Confirm an admin account has been provisioned, then sign in at `/admin/login`.
 
 Uploads disappear:
 

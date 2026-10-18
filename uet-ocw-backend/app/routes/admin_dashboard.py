@@ -53,7 +53,7 @@ ADMIN_LOGIN_HTML = """
       padding: 20px;
     }
     button, input { font: inherit; }
-    .screen { width: min(980px, 100%); display: grid; grid-template-columns: 1fr 1fr; gap: 20px; align-items: stretch; }
+    .screen { width: min(480px, 100%); display: grid; gap: 20px; align-items: stretch; }
     .panel {
       background: var(--panel);
       border: 1px solid var(--line);
@@ -88,14 +88,10 @@ ADMIN_LOGIN_HTML = """
     }
     .btn:hover { background: var(--brand-dark); transform: translateY(-1px); }
     .btn.secondary { background: white; color: var(--ink); border-color: var(--line); }
-    .btn.warn { background: var(--accent); border-color: var(--accent); }
     .actions { display: flex; gap: 8px; flex-wrap: wrap; }
     .notice { min-height: 24px; margin-top: 12px; color: var(--muted); font-size: 14px; white-space: pre-wrap; }
     .notice.ok { color: var(--ok); }
     .notice.err { color: var(--danger); }
-    @media (max-width: 780px) {
-      .screen { grid-template-columns: 1fr; }
-    }
   </style>
 </head>
 <body>
@@ -112,18 +108,6 @@ ADMIN_LOGIN_HTML = """
         </div>
       </form>
       <div id="loginNotice" class="notice"></div>
-    </section>
-    <section class="panel">
-      <h2>First admin setup</h2>
-      <p>Create the first admin account here. After one admin exists, only a logged-in admin can create more admin accounts.</p>
-      <form id="setupForm">
-        <label>Username<input name="username" required autocomplete="off" /></label>
-        <label>Email<input name="email" type="email" required autocomplete="off" /></label>
-        <label>Full name<input name="full_name" /></label>
-        <label>Password<input name="password" type="password" required autocomplete="new-password" /></label>
-        <button class="btn warn" type="submit">Create first admin</button>
-      </form>
-      <div id="setupNotice" class="notice"></div>
     </section>
   </main>
 
@@ -144,20 +128,6 @@ ADMIN_LOGIN_HTML = """
         window.location.href = "/admin/dashboard";
       } catch (error) {
         setNotice("loginNotice", error.message, false);
-      }
-    });
-
-    $("setupForm").addEventListener("submit", async (event) => {
-      event.preventDefault();
-      const payload = { ...formToObject(event.currentTarget), role: "ADMIN" };
-      setNotice("setupNotice", "Creating admin...");
-      try {
-        await api("/api/roles/seed", { method: "POST", body: "{}" });
-        const response = await api("/api/auth/register", { method: "POST", body: JSON.stringify(payload) });
-        localStorage.setItem(tokenKey, response.access_token);
-        window.location.href = "/admin/dashboard";
-      } catch (error) {
-        setNotice("setupNotice", error.message, false);
       }
     });
 
