@@ -25,7 +25,7 @@ ADMIN_LOGIN_HTML = """
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>UET OCW Admin Login</title>
+  <title>UET OCW Staff Login</title>
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
   <style>
     :root {
@@ -97,8 +97,8 @@ ADMIN_LOGIN_HTML = """
 <body>
   <main class="screen">
     <section class="panel">
-      <h1>UET OCW Admin</h1>
-      <p>Login with an admin account to manage courses, faculties, departments, resources, and approvals.</p>
+      <h1>UET OCW Staff Login</h1>
+      <p>Sign in with your administrator or moderator account. Moderators can review course submissions and approve or reject content.</p>
       <form id="loginForm">
         <label>Email or username<input name="email" required autocomplete="username" /></label>
         <label>Password<input name="password" type="password" required autocomplete="current-password" /></label>
@@ -121,11 +121,12 @@ ADMIN_LOGIN_HTML = """
       setNotice("loginNotice", "Logging in...");
       try {
         const response = await api("/api/auth/login", { method: "POST", body: JSON.stringify(payload) });
-        if ((response.data?.role?.name || "").toUpperCase() !== "ADMIN") {
-          throw new Error("Only ADMIN users can open the admin dashboard");
+        const role = (response.data?.role?.name || "").toUpperCase();
+        if (!["ADMIN", "MODERATOR"].includes(role)) {
+          throw new Error("An administrator or moderator account is required");
         }
         localStorage.setItem(tokenKey, response.access_token);
-        window.location.href = "/admin/dashboard";
+        window.location.href = role === "MODERATOR" ? "/moderator/dashboard" : "/admin/dashboard";
       } catch (error) {
         setNotice("loginNotice", error.message, false);
       }
@@ -377,6 +378,7 @@ ADMIN_DASHBOARD_HTML = """
         <h1 id="pageTitle">Overview</h1>
         <div class="session-bar">
           <span id="currentUserLabel">Not logged in</span>
+          <a class="btn secondary" href="/moderator/dashboard">Content review</a>
           <button class="btn secondary" id="logoutBtn">Logout</button>
           <button class="btn secondary" id="refreshBtn">Refresh</button>
         </div>
@@ -431,6 +433,7 @@ ADMIN_DASHBOARD_HTML = """
                   <select name="role" required>
                     <option value="TEACHER">TEACHER</option>
                     <option value="STUDENT">STUDENT</option>
+                    <option value="MODERATOR">MODERATOR</option>
                     <option value="ADMIN">ADMIN</option>
                   </select>
                 </label>
@@ -944,7 +947,12 @@ ADMIN_DASHBOARD_HTML = """
           window.location.href = "/admin/login";
           return;
         }
-        if ((state.user.role?.name || "").toUpperCase() !== "ADMIN") {
+        const role = (state.user.role?.name || "").toUpperCase();
+        if (role === "MODERATOR") {
+          window.location.href = "/moderator/dashboard";
+          return;
+        }
+        if (role !== "ADMIN") {
           localStorage.removeItem("ocw_admin_token");
           window.location.href = "/admin/login";
           return;
@@ -1051,7 +1059,7 @@ ADMIN_DASHBOARD_HTML = """
       event.preventDefault();
       const form = event.currentTarget;
       if (!token() || !state.user) {
-        $("credentialResult").textContent = "Login as admin first, then create teacher/student credentials.";
+        $("credentialResult").textContent = "Login as admin first, then create user credentials.";
         setNotice("Login as admin first", false);
         return;
       }

@@ -1,0 +1,419 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Content Review · UET OCW</title>
+  <style>
+    :root { color-scheme: light; --bg:#eef3f7; --panel:#fff; --ink:#18212f; --muted:#647184; --line:#d7e0ea; --brand:#0d6efd; --navy:#0b1f3a; --danger:#b42318; --ok:#087443; font-family:Inter,ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif; }
+    * { box-sizing:border-box; }
+    body { margin:0; background:var(--bg); color:var(--ink); }
+    button,input,select,textarea { font:inherit; }
+    button,a,input,select,textarea { touch-action:manipulation; }
+    button { cursor:pointer; }
+    button:disabled { cursor:wait; opacity:.6; }
+    :focus-visible { outline:3px solid #80b7ff; outline-offset:3px; }
+    [hidden] { display:none!important; }
+    .shell { min-height:100vh; display:grid; grid-template-columns:228px minmax(0,1fr); }
+    .sidebar { background:var(--navy); color:white; padding:28px 20px; }
+    .brand { font-size:23px; font-weight:750; margin:0 0 6px; }
+    .sidebar p { color:#c0cfdf; font-size:13px; line-height:1.6; }
+    .nav-current { display:block; margin:28px 0 16px; background:#ffffff20; border:1px solid #ffffff25; border-radius:10px; padding:12px; font-weight:650; }
+    .sidebar a { color:white; }
+    main { min-width:0; }
+    .topbar { display:flex; flex-wrap:wrap; align-items:center; justify-content:space-between; gap:14px; padding:20px 28px; background:white; border-bottom:1px solid var(--line); }
+    h1 { margin:0; font-size:24px; }
+    h2 { margin:0; font-size:19px; }
+    h3 { margin:0 0 12px; font-size:16px; }
+    h4 { margin:0; font-size:15px; }
+    .session,.actions { display:flex; align-items:center; flex-wrap:wrap; gap:9px; }
+    #currentUser { color:var(--muted); font-size:13px; }
+    .btn { display:inline-flex; align-items:center; justify-content:center; min-height:40px; border:1px solid var(--brand); border-radius:9px; padding:9px 14px; color:white; background:var(--brand); text-decoration:none; font-weight:650; }
+    .btn:hover { filter:brightness(.95); }
+    .btn.secondary { background:white; border-color:var(--line); color:var(--ink); }
+    .btn.approve { background:var(--ok); border-color:var(--ok); }
+    .btn.reject { background:var(--danger); border-color:var(--danger); }
+    .btn.small { min-height:34px; padding:6px 10px; font-size:13px; }
+    .content { padding:24px 28px; }
+    .panel { background:var(--panel); border:1px solid var(--line); border-radius:14px; padding:20px; }
+    .intro { color:var(--muted); margin:0 0 20px; line-height:1.6; }
+    .filters { display:grid; grid-template-columns:repeat(4,minmax(120px,1fr)); gap:14px; margin-bottom:20px; }
+    label { display:grid; gap:7px; color:#405168; font-size:13px; font-weight:650; }
+    input,select,textarea { width:100%; min-width:0; border:1px solid #b9c8d8; border-radius:8px; padding:10px; color:var(--ink); background:white; }
+    textarea { min-height:90px; resize:vertical; }
+    .search { grid-column:span 3; }
+    .filter-actions { align-self:end; }
+    .notice { padding:12px 15px; border:1px solid var(--line); border-radius:10px; margin-bottom:18px; background:white; overflow-wrap:anywhere; }
+    .notice.error { border-color:#f1b1aa; color:var(--danger); background:#fff5f4; }
+    .notice.success { border-color:#97d5b5; color:var(--ok); background:#f0fbf5; }
+    .review-layout { display:grid; grid-template-columns:minmax(260px,350px) minmax(0,1fr); gap:20px; align-items:start; }
+    .queue-panel { padding:0; overflow:hidden; }
+    .queue-head { padding:20px; border-bottom:1px solid var(--line); }
+    .queue-head p { margin:7px 0 0; font-size:13px; color:var(--muted); }
+    .course-row { width:100%; display:block; background:white; text-align:left; border:0; border-bottom:1px solid var(--line); padding:17px 20px; color:var(--ink); }
+    .course-row:hover { background:#f5f9ff; }
+    .course-row[aria-current="true"] { background:#eaf3ff; box-shadow:inset 4px 0 var(--brand); }
+    .row-heading { display:flex; align-items:start; justify-content:space-between; gap:10px; }
+    .course-row strong { font-size:14px; line-height:1.5; overflow-wrap:anywhere; }
+    .course-row .meta { margin-top:8px; color:var(--muted); font-size:12px; line-height:1.65; overflow-wrap:anywhere; }
+    .badge { display:inline-block; border-radius:20px; padding:4px 8px; font-size:11px; font-weight:750; white-space:nowrap; background:#eff2f6; color:#41536c; }
+    .badge.pending { background:#fff1cf; color:#795500; }
+    .badge.approved { background:#ddf6e9; color:#06643b; }
+    .badge.rejected { background:#ffe6e1; color:#a32a1b; }
+    .pagination { display:flex; justify-content:space-between; align-items:center; gap:8px; padding:14px; font-size:12px; color:var(--muted); }
+    .empty { text-align:center; color:var(--muted); padding:36px 20px; line-height:1.7; }
+    .detail-head { display:flex; justify-content:space-between; align-items:start; gap:15px; padding-bottom:18px; border-bottom:1px solid var(--line); }
+    .detail-head h2 { font-size:23px; line-height:1.4; overflow-wrap:anywhere; }
+    .eyebrow { color:var(--muted); font-size:12px; margin:0 0 6px; }
+    .details-grid { display:grid; grid-template-columns:1fr 1fr; gap:16px; margin:20px 0; }
+    .details-grid dt { font-size:12px; color:var(--muted); margin-bottom:5px; }
+    .details-grid dd { margin:0; line-height:1.5; font-size:14px; overflow-wrap:anywhere; }
+    .preview { padding:20px 0; border-top:1px solid var(--line); }
+    .prose { white-space:pre-wrap; line-height:1.7; overflow-wrap:anywhere; font-size:14px; margin:0; }
+    .muted { color:var(--muted); }
+    .thumbnail { display:block; max-width:100%; width:100%; max-height:320px; object-fit:contain; background:#f2f5f8; border-radius:10px; margin-top:10px; }
+    .item { padding:14px; margin-top:10px; background:#f6f8fb; border:1px solid var(--line); border-radius:10px; }
+    .item p { margin:7px 0 10px; }
+    .item .actions { margin-top:10px; }
+    .review-box { border-top:1px solid var(--line); padding-top:20px; }
+    .review-box .actions { margin-top:14px; }
+    .review-box p { font-size:13px; line-height:1.6; }
+    details { border-top:1px solid var(--line); margin-top:20px; padding-top:16px; }
+    summary { cursor:pointer; font-weight:650; }
+    .history { list-style:none; padding:0; margin:10px 0 0; }
+    .history li { padding:12px 0; border-bottom:1px solid var(--line); font-size:13px; line-height:1.6; }
+    .history p { margin:5px 0 0; }
+    @media(max-width:1200px) { .shell { grid-template-columns:180px minmax(0,1fr); } .content,.topbar { padding:20px; } .review-layout { grid-template-columns:minmax(240px,290px) minmax(0,1fr); } .filters { grid-template-columns:repeat(2,minmax(0,1fr)); } .search { grid-column:1; } }
+    @media(max-width:850px) { .shell { display:block; } .sidebar { padding:18px 20px; } .sidebar p { margin:4px 0; } .nav-current { margin:14px 0 10px; display:inline-block; } .review-layout { grid-template-columns:1fr; } #courseList { max-height:420px; overflow-y:auto; } }
+    @media(max-width:480px) { .content,.topbar { padding:16px; } .filters,.details-grid { grid-template-columns:1fr; } .search { grid-column:auto; } .panel { padding:16px; } .queue-panel { padding:0; } .detail-head { flex-direction:column; } }
+  </style>
+</head>
+<body>
+  <div class="shell">
+    <aside class="sidebar">
+      <div class="brand">UET OCW</div>
+      <p>Moderator workspace</p>
+      <span class="nav-current">Content review</span>
+      <p>Review instructor submissions and record an approval or rejection.</p>
+      <a id="adminLink" href="/admin/dashboard" hidden>Back to admin dashboard</a>
+    </aside>
+    <main>
+      <header class="topbar">
+        <h1>Content review</h1>
+        <div class="session"><span id="currentUser">Checking your account…</span><button class="btn secondary" id="refreshBtn" hidden>Refresh</button><button class="btn secondary" id="logoutBtn">Logout</button></div>
+      </header>
+      <div class="content">
+        <div id="notice" class="notice" role="status" aria-live="polite">Loading your review workspace…</div>
+        <button id="retryBtn" class="btn secondary" hidden>Try again</button>
+        <div id="workspace" hidden>
+          <p class="intro">Review the course details and uploaded materials before making a decision. Pending and rejected submissions stay hidden from users and students.</p>
+          <form id="filters" class="panel filters">
+            <label>Faculty<select id="facultyFilter" name="faculty_id"><option value="">All faculties</option></select></label>
+            <label>Department<select id="departmentFilter" name="department_id"><option value="">All departments</option></select></label>
+            <label>Instructor<select id="instructorFilter" name="instructor_id"><option value="">All instructors</option></select></label>
+            <label>Review status<select id="statusFilter" name="status"><option value="PENDING">Pending review</option><option value="APPROVED">Approved</option><option value="REJECTED">Rejected</option><option value="ALL">All statuses</option></select></label>
+            <label class="search">Search courses<input name="q" id="searchFilter" type="search" placeholder="Course name or code"></label>
+            <div class="actions filter-actions"><button class="btn" type="submit">Apply filters</button><button class="btn secondary" type="reset">Reset</button></div>
+          </form>
+          <div class="review-layout">
+            <section class="panel queue-panel" aria-label="Course submissions">
+              <div class="queue-head"><h2>Submissions</h2><p id="queueCount">Loading submissions…</p></div>
+              <div id="courseList" aria-live="polite"></div>
+              <div class="pagination"><button class="btn secondary small" id="previousBtn" disabled>Previous</button><span id="pageLabel">Page 1</span><button class="btn secondary small" id="nextBtn" disabled>Next</button></div>
+            </section>
+            <section id="courseDetail" class="panel" aria-label="Course preview" aria-live="polite"><div class="empty">Select a course to inspect its details and materials.</div></section>
+          </div>
+        </div>
+      </div>
+    </main>
+  </div>
+  <script>
+    "use strict";
+    const tokenKey = "ocw_admin_token";
+    const $ = id => document.getElementById(id);
+    const state = { filters: null, courses: [], course: null, page: 1, pages: 1, total: 0, queueRequest: 0, detailRequest: 0, saving: false, queueLoading: false, thumbnailUrl: null };
+    const escapeHtml = value => String(value ?? "").replace(/[&<>"']/g, char => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[char]));
+    const personName = person => person?.full_name || person?.username || "Unknown instructor";
+    const displayDate = value => { const date = new Date(value); return value && !Number.isNaN(date.getTime()) ? date.toLocaleString() : "Not recorded"; };
+    const badge = status => `<span class="badge ${["PENDING","APPROVED","REJECTED"].includes(status) ? status.toLowerCase() : ""}">${escapeHtml(status || "PENDING")}</span>`;
+
+    function notify(message, kind = "") {
+      $("notice").textContent = message;
+      $("notice").className = "notice" + (kind ? " " + kind : "");
+      $("notice").hidden = !message;
+    }
+
+    async function api(path, options = {}) {
+      const response = await fetch(path, { ...options, headers: { "Content-Type":"application/json", Authorization:`Bearer ${localStorage.getItem(tokenKey) || ""}`, ...(options.headers || {}) } });
+      const data = await response.json().catch(() => ({}));
+      if (!response.ok) {
+        if (response.status === 401) { localStorage.removeItem(tokenKey); window.location.replace("/admin/login"); }
+        const error = new Error(data.message || `Request failed (${response.status}). Please try again.`);
+        error.status = response.status;
+        throw error;
+      }
+      return data;
+    }
+
+    function safeUrl(value) {
+      if (!value || typeof value !== "string") return null;
+      try { const url = new URL(value, window.location.origin); return ["http:","https:"].includes(url.protocol) && !url.username && !url.password ? url : null; } catch { return null; }
+    }
+
+    function fileLink(value, label) {
+      const url = safeUrl(value);
+      if (!url) return value ? `<span class="muted">${escapeHtml(label)}: invalid link</span>` : "";
+      if (url.origin === window.location.origin && url.pathname.startsWith("/uploads/")) {
+        return `<button type="button" class="btn secondary small" data-file="${escapeHtml(url.href)}">${escapeHtml(label)}</button>`;
+      }
+      return `<a class="btn secondary small" href="${escapeHtml(url.href)}" target="_blank" rel="noopener noreferrer">${escapeHtml(label)}</a>`;
+    }
+
+    function selectOptions(id, entries, label, text) {
+      $(id).innerHTML = `<option value="">${label}</option>` + entries.map(item => `<option value="${escapeHtml(item.id)}">${escapeHtml(text(item))}</option>`).join("");
+    }
+
+    function updateDepartments() {
+      const selected = $("departmentFilter").value;
+      const faculty = $("facultyFilter").value;
+      const departments = (state.filters?.departments || []).filter(item => !faculty || String(item.faculty_id) === faculty);
+      selectOptions("departmentFilter", departments, "All departments", item => item.name);
+      $("departmentFilter").value = departments.some(item => String(item.id) === selected) ? selected : "";
+    }
+
+    async function initialize() {
+      $("retryBtn").hidden = true;
+      if (!localStorage.getItem(tokenKey)) { window.location.replace("/admin/login"); return; }
+      notify("Loading your review workspace…");
+      try {
+        const me = (await api("/api/auth/me")).data;
+        const role = (me?.role?.name || "").toUpperCase();
+        if (!["ADMIN", "MODERATOR"].includes(role)) {
+          localStorage.removeItem(tokenKey);
+          window.location.replace("/admin/login");
+          return;
+        }
+        $("currentUser").textContent = `${personName(me)} (${role})`;
+        $("adminLink").hidden = role !== "ADMIN";
+        state.filters = (await api("/api/moderation/filters")).data;
+        selectOptions("facultyFilter", state.filters.faculties || [], "All faculties", item => item.name);
+        selectOptions("instructorFilter", state.filters.instructors || [], "All instructors", item => `${personName(item)}${item.email ? " · " + item.email : ""}`);
+        updateDepartments();
+        $("workspace").hidden = false;
+        $("refreshBtn").hidden = false;
+        notify("");
+        await loadQueue();
+      } catch (error) { notify(error.message, "error"); $("retryBtn").hidden = false; }
+    }
+
+    function clearDetail() {
+      state.detailRequest++;
+      state.course = null;
+      if (state.thumbnailUrl) URL.revokeObjectURL(state.thumbnailUrl);
+      state.thumbnailUrl = null;
+      $("courseDetail").innerHTML = '<div class="empty">Select a course to inspect its details and materials.</div>';
+    }
+
+    async function loadQueue({ keepSelection = false } = {}) {
+      const requestId = ++state.queueRequest;
+      const selectedId = keepSelection ? state.course?.id : null;
+      if (!keepSelection) clearDetail();
+      state.queueLoading = true;
+      updateControls();
+      $("queueCount").textContent = "Loading submissions…";
+      $("courseList").innerHTML = '<div class="empty">Loading…</div>';
+      // Read values explicitly: disabled controls are omitted from FormData.
+      const params = new URLSearchParams(["faculty_id", "department_id", "instructor_id", "status", "q"].map(name => [name, $("filters").elements.namedItem(name).value]));
+      params.set("page", state.page);
+      params.set("per_page", "12");
+      try {
+        const response = await api(`/api/moderation/courses?${params}`);
+        if (requestId !== state.queueRequest) return;
+        state.courses = response.data || [];
+        state.pages = Math.max(1, response.pagination?.pages || 1);
+        state.total = response.pagination?.total ?? state.courses.length;
+        if (state.page > state.pages) { state.page = state.pages; await loadQueue({ keepSelection }); return; }
+        renderQueue();
+        if (selectedId && state.courses.some(course => course.id === selectedId)) await openCourse(selectedId, false);
+        else if (keepSelection) clearDetail();
+      } catch (error) {
+        if (requestId !== state.queueRequest) return;
+        state.courses = [];
+        $("queueCount").textContent = "Unable to load submissions";
+        $("courseList").innerHTML = '<div class="empty">Could not load the review queue. Use Refresh to try again.</div>';
+        notify(error.message, "error");
+      } finally {
+        if (requestId === state.queueRequest) { state.queueLoading = false; updateControls(); }
+      }
+    }
+
+    function renderQueue() {
+      $("queueCount").textContent = `${state.total} matching ${state.total === 1 ? "submission" : "submissions"}`;
+      $("pageLabel").textContent = `Page ${state.page} of ${state.pages}`;
+      $("courseList").innerHTML = state.courses.length ? state.courses.map(course => `
+        <button type="button" class="course-row" data-course-id="${escapeHtml(course.id)}" aria-current="${state.course?.id === course.id}">
+          <span class="row-heading"><strong>${escapeHtml(course.title)}</strong>${badge(course.review_status)}</span>
+          <div class="meta">${escapeHtml(course.department?.name || "No department")}<br>${escapeHtml(course.faculty?.name || "No faculty")}<br>Submitted by ${escapeHtml(personName(course.submitted_by))}</div>
+        </button>`).join("") : '<div class="empty">No submissions match these filters.</div>';
+    }
+
+    async function openCourse(id, focus = true) {
+      if (state.saving) return;
+      clearDetail();
+      const requestId = state.detailRequest;
+      $("courseDetail").innerHTML = '<div class="empty">Loading course details and materials…</div>';
+      try {
+        const course = (await api(`/api/moderation/courses/${encodeURIComponent(id)}`)).data;
+        if (requestId !== state.detailRequest) return;
+        state.course = course;
+        renderQueue();
+        renderDetail(course);
+        loadThumbnail(course.thumbnail, requestId);
+        if (focus && window.matchMedia("(max-width:850px)").matches) $("courseDetail").scrollIntoView({ behavior:"smooth", block:"start" });
+      } catch (error) {
+        if (requestId !== state.detailRequest) return;
+        $("courseDetail").innerHTML = '<div class="empty">Unable to load this course. Select it again to retry.</div>';
+        notify(error.message, "error");
+      }
+    }
+
+    function textSection(title, text) {
+      return `<section class="preview"><h3>${escapeHtml(title)}</h3><p class="prose${text ? "" : " muted"}">${escapeHtml(text || "Not provided")}</p></section>`;
+    }
+
+    function renderDetail(course) {
+      const lectures = course.lectures || [];
+      const resources = course.resources || [];
+      const submitted = course.submitted_by;
+      const info = [
+        ["Submitted by", `${personName(submitted)}${submitted?.email ? "\n" + submitted.email : ""}`],
+        ["Department / faculty", `${course.department?.name || "Not assigned"}\n${course.faculty?.name || "Not assigned"}`],
+        ["Course code / level", `${course.course_code || "No code"} · ${course.level || "Not specified"}`],
+        ["Instructor listed on course", `${course.instructor_name || personName(submitted)}${course.instructor_email ? "\n" + course.instructor_email : ""}`],
+        ["Last updated", displayDate(course.updated_at || course.created_at)],
+        ["Access", `${course.access_level || "PUBLIC"}${course.login_required ? " · Login required" : ""}`],
+      ];
+      const history = course.review_history || [];
+      $("courseDetail").innerHTML = `
+        <div class="detail-head"><div><p class="eyebrow">COURSE PREVIEW · #${escapeHtml(course.id)}</p><h2>${escapeHtml(course.title)}</h2></div>${badge(course.review_status)}</div>
+        <dl class="details-grid">${info.map(([label,value]) => `<div><dt>${escapeHtml(label)}</dt><dd class="prose">${escapeHtml(value)}</dd></div>`).join("")}</dl>
+        <section class="preview"><h3>Course image</h3><p id="imageNotice" class="muted">${course.thumbnail ? "Loading image…" : "No image uploaded"}</p><img id="courseImage" class="thumbnail" alt="Course thumbnail" hidden></section>
+        ${textSection("Short description", course.short_description)}
+        ${textSection("About the course", course.description)}
+        ${textSection("Syllabus", course.syllabus)}
+        ${textSection("Learning outcomes", course.learning_outcomes)}
+        ${textSection("Calendar / schedule", course.schedule)}
+        <section class="preview"><h3>Lectures (${lectures.length})</h3>${lectures.length ? lectures.map(lecture => `
+          <article class="item"><h4>${escapeHtml(lecture.lecture_number)}. ${escapeHtml(lecture.title)}</h4>
+          <p class="prose">${escapeHtml(lecture.description || "No description")}</p><p class="muted">${lecture.duration_minutes ? escapeHtml(lecture.duration_minutes) + " minutes · " : ""}${lecture.is_published ? "Published lecture" : "Unpublished lecture"}</p>
+          <div class="actions">${fileLink(lecture.video_url,"View video")}${fileLink(lecture.presentation_url,"View presentation")}${fileLink(lecture.notes_url,"View notes")}</div></article>`).join("") : '<p class="muted">No lectures uploaded</p>'}</section>
+        <section class="preview"><h3>Resources (${resources.length})</h3>${resources.length ? resources.map(resource => `
+          <article class="item"><h4>${escapeHtml(resource.title)}</h4><p class="muted">${escapeHtml(resource.resource_type || "Resource")}${resource.lecture_number ? " · Lecture " + escapeHtml(resource.lecture_number) : ""}</p>
+          <p class="prose">${escapeHtml(resource.description || "No description")}</p><div class="actions">${fileLink(resource.file_url,"View file")}${fileLink(resource.external_url,"Open external resource")}</div></article>`).join("") : '<p class="muted">No resources uploaded</p>'}</section>
+        ${course.review_reason ? `<section class="preview"><h3>Latest review feedback</h3><p class="prose">${escapeHtml(course.review_reason)}</p><p class="muted">${escapeHtml(personName(course.reviewed_by))} · ${escapeHtml(displayDate(course.reviewed_at))}</p></section>` : ""}
+        ${course.review_status === "PENDING" ? `
+          <form id="reviewForm" class="review-box"><h3>Review decision</h3><p class="muted">This decision covers the course details and the materials shown above. Approval makes the course available according to its access settings.</p>
+          <label>Feedback <span class="muted">Required for rejection; optional for approval</span><textarea id="reviewReason" name="reason" maxlength="2000" placeholder="Explain any changes the instructor needs to make."></textarea></label>
+          <div class="actions"><button class="btn approve" type="submit" value="approve">Approve course</button><button class="btn reject" type="submit" value="reject">Reject course</button></div></form>` : '<div class="review-box"><p class="muted">This submission has already been reviewed. New instructor changes will return it to the pending queue.</p></div>'}
+        <details><summary>Review history (${history.length})</summary><ul class="history">${history.length ? history.map(review => `<li><strong>${escapeHtml(review.decision || review.status || "Review")}</strong> · ${escapeHtml(personName(review.reviewed_by || review.reviewer))}<br><span class="muted">${escapeHtml(displayDate(review.reviewed_at || review.created_at))}</span>${review.reason ? `<p class="prose">${escapeHtml(review.reason)}</p>` : ""}</li>`).join("") : '<li class="muted">No reviews recorded yet.</li>'}</ul></details>`;
+      $("reviewForm")?.addEventListener("submit", submitReview);
+    }
+
+    async function loadThumbnail(value, requestId) {
+      const url = safeUrl(value);
+      if (!value) return;
+      if (!url) { $("imageNotice").textContent = "The image link is invalid."; return; }
+      try {
+        let source = url.href;
+        if (url.origin === window.location.origin && url.pathname.startsWith("/uploads/")) {
+          const response = await fetch(url.href, { headers:{Authorization:`Bearer ${localStorage.getItem(tokenKey) || ""}`} });
+          if (!response.ok) throw new Error("Image unavailable");
+          const blob = await response.blob();
+          if (!/^image\/(png|jpeg|gif|webp|avif|bmp)$/i.test(blob.type)) throw new Error("Unsupported image format");
+          if (requestId !== state.detailRequest) return;
+          source = URL.createObjectURL(blob);
+          state.thumbnailUrl = source;
+        }
+        if (requestId !== state.detailRequest) return;
+        const img = $("courseImage");
+        img.onload = () => { if (requestId === state.detailRequest) { img.hidden = false; $("imageNotice").hidden = true; } };
+        img.onerror = () => { if (requestId === state.detailRequest) $("imageNotice").textContent = "The course image could not be loaded."; };
+        img.referrerPolicy = "no-referrer";
+        img.src = source;
+      } catch { if (requestId === state.detailRequest) $("imageNotice").textContent = "The course image could not be loaded."; }
+    }
+
+    async function openFile(button) {
+      const url = safeUrl(button.dataset.file);
+      if (!url || url.origin !== window.location.origin || !url.pathname.startsWith("/uploads/")) return;
+      button.disabled = true;
+      const label = button.textContent;
+      button.textContent = "Loading file…";
+      // Open immediately so browsers do not block the preview after the fetch.
+      const preview = window.open("about:blank", "_blank");
+      if (preview) { preview.opener = null; preview.document.title = "Loading course file"; preview.document.body.textContent = "Loading course file…"; }
+      try {
+        const response = await fetch(url.href, { headers:{Authorization:`Bearer ${localStorage.getItem(tokenKey) || ""}`} });
+        if (!response.ok) throw new Error(`Unable to open the file (${response.status}). Refresh your session and try again.`);
+        const blob = await response.blob();
+        const safePreview = /^(application\/pdf|image\/(png|jpeg|gif|webp|avif|bmp)|video\/[a-z0-9.+-]+|audio\/[a-z0-9.+-]+|text\/plain)$/i.test(blob.type);
+        const objectUrl = URL.createObjectURL(safePreview ? blob : new Blob([blob], {type:"application/octet-stream"}));
+        if (safePreview && preview) preview.location.replace(objectUrl);
+        else {
+          preview?.close();
+          const link = document.createElement("a");
+          link.href = objectUrl;
+          link.download = decodeURIComponent(url.pathname.split("/").pop() || "course-file");
+          document.body.appendChild(link); link.click(); link.remove();
+        }
+        setTimeout(() => URL.revokeObjectURL(objectUrl), 300000);
+      } catch (error) { preview?.close(); notify(error.message, "error"); }
+      finally { button.disabled = false; button.textContent = label; }
+    }
+
+    function updateControls() {
+      const busy = state.saving || state.queueLoading;
+      $("previousBtn").disabled = busy || state.page <= 1;
+      $("nextBtn").disabled = busy || state.page >= state.pages;
+      $("refreshBtn").disabled = busy;
+      document.querySelectorAll("#filters input,#filters select,#filters button").forEach(element => element.disabled = busy);
+      document.querySelectorAll("#reviewForm button,#reviewReason,.course-row").forEach(element => element.disabled = state.saving);
+    }
+
+    async function submitReview(event) {
+      event.preventDefault();
+      if (state.saving || !state.course) return;
+      const decision = event.submitter?.value;
+      if (!["approve","reject"].includes(decision)) return;
+      const reason = $("reviewReason").value.trim();
+      if (decision === "reject" && !reason) { notify("Please explain the rejection so the instructor knows what to change.", "error"); $("reviewReason").focus(); return; }
+      const course = state.course;
+      state.saving = true;
+      updateControls();
+      notify("Saving your review…");
+      try {
+        await api(`/api/moderation/courses/${course.id}/${decision}`, { method:"POST", body:JSON.stringify({reason,review_version:course.review_version}) });
+        notify(`${course.title} ${decision === "approve" ? "approved" : "rejected"} successfully.`, "success");
+        state.saving = false;
+        await loadQueue();
+      } catch (error) {
+        notify(error.status === 409 ? "This submission changed while you were reviewing it. The latest version is loading; check it before deciding again." : error.message, "error");
+        state.saving = false;
+        if (error.status === 409) await openCourse(course.id, false);
+      } finally { state.saving = false; updateControls(); }
+    }
+
+    $("filters").addEventListener("submit", event => { event.preventDefault(); state.page = 1; notify(""); loadQueue(); });
+    $("filters").addEventListener("reset", () => { setTimeout(() => { updateDepartments(); state.page = 1; notify(""); loadQueue(); }, 0); });
+    $("facultyFilter").addEventListener("change", updateDepartments);
+    $("courseList").addEventListener("click", event => { const row = event.target.closest("[data-course-id]"); if (row) openCourse(Number(row.dataset.courseId)); });
+    $("courseDetail").addEventListener("click", event => { const button = event.target.closest("[data-file]"); if (button) openFile(button); });
+    $("previousBtn").addEventListener("click", () => { state.page--; loadQueue(); });
+    $("nextBtn").addEventListener("click", () => { state.page++; loadQueue(); });
+    $("refreshBtn").addEventListener("click", () => { notify(""); loadQueue({keepSelection:true}); });
+    $("retryBtn").addEventListener("click", initialize);
+    $("logoutBtn").addEventListener("click", () => { localStorage.removeItem(tokenKey); window.location.replace("/admin/login"); });
+    initialize();
+  </script>
+</body>
+</html>

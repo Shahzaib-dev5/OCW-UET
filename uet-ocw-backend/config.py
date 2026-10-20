@@ -11,6 +11,9 @@ if DB_SSL_CA and not os.path.isabs(DB_SSL_CA):
 
 
 class Config:
+    # Temporarily disabled; set EMAIL_OTP_ENABLED=true to restore verification.
+    EMAIL_OTP_ENABLED = os.getenv("EMAIL_OTP_ENABLED", "false").strip().lower() == "true"
+
     SQLALCHEMY_ENGINE_OPTIONS = (
         {"connect_args": {"ssl": {"ca": DB_SSL_CA}}}
         if DB_SSL_CA

@@ -6,6 +6,7 @@ from app.extensions import db
 from app.models.course import AccessLevel, Course
 from app.models.resource import CourseResource, CourseResourceType
 from app.services.authz import can_manage_course, can_view_book_learning, can_view_course_learning, can_view_course_record, can_view_course_resources, current_user, enrollment_status_for, is_admin, is_approved_instructor
+from app.services.course_moderation import course_content_changed
 
 
 course_resources_bp = Blueprint(
@@ -99,6 +100,7 @@ def create_course_resource():
     resource = CourseResource(**values)
     db.session.add(resource)
     try:
+        course_content_changed(resource.course_id)
         db.session.commit()
     except IntegrityError:
         db.session.rollback()
@@ -125,11 +127,18 @@ def update_course_resource(resource_id):
         return error
     if not _can_update_or_delete_resource(resource):
         return _error("Only admin or an approved teacher can update resources for this course", 403)
+    previous_course_id = resource.course_id
+    target_course_id = values.get("course_id", resource.course_id)
+    target_type = values.get("resource_type", resource.resource_type)
+    if not _can_manage_resource({"course_id": target_course_id, "resource_type": target_type}):
+        return _error("You cannot move this resource to the selected course", 403)
 
     for field, value in values.items():
         setattr(resource, field, value)
 
     try:
+        for changed_course_id in sorted(course_id for course_id in {previous_course_id, target_course_id} if course_id is not None):
+            course_content_changed(changed_course_id)
         db.session.commit()
     except IntegrityError:
         db.session.rollback()
@@ -151,6 +160,7 @@ def delete_course_resource(resource_id):
 
     db.session.delete(resource)
     try:
+        course_content_changed(resource.course_id)
         db.session.commit()
     except IntegrityError:
         db.session.rollback()
@@ -264,6 +274,10 @@ def _can_update_or_delete_resource(resource):
         return False
     if is_admin(user):
         return True
+    if not is_approved_instructor(user):
+        return False
+    if resource.course_id is not None:
+        return can_manage_course(resource.course_id)
     if resource.resource_type == CourseResourceType.BOOK:
         return resource.owner_id is not None and resource.owner_id == user.id
     return resource.course_id is not None and can_manage_course(resource.course_id)

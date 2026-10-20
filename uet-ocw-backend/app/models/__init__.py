@@ -1,5 +1,6 @@
 from app.models.author import Author
 from app.models.course import Course
+from app.models.course_review import CourseReview
 from app.models.department import Department
 from app.models.enrollment import CourseEnrollment, CourseTeachingApplication, InstructorApplication, ResourceEnrollment
 from app.models.faculty import Faculty
@@ -18,6 +19,7 @@ from app.models.user import User
 __all__ = [
     "Author",
     "Course",
+    "CourseReview",
     "Department",
     "CourseEnrollment",
     "CourseTeachingApplication",

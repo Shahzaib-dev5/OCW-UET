@@ -1,3 +1,5 @@
+from datetime import datetime
+
 from flask import Blueprint, jsonify, request
 from sqlalchemy import select
 from sqlalchemy.exc import IntegrityError, OperationalError
@@ -5,6 +7,9 @@ from sqlalchemy.exc import IntegrityError, OperationalError
 from app.extensions import db
 from app.models.course import AccessLevel, Course, CourseLevel, CourseStatus
 from app.models.department import Department
+from app.models.course_review import CourseReview
+from app.models.enrollment import ApplicationStatus, CourseTeachingApplication
+from app.services.course_moderation import course_content_changed
 from app.services.authz import (
     ADMIN,
     can_manage_course,
@@ -14,6 +19,7 @@ from app.services.authz import (
     enrollment_status_for,
     is_approved_instructor,
     is_admin,
+    is_course_reviewer,
     require_roles,
 )
 
@@ -104,8 +110,16 @@ def create_course():
         values.setdefault("instructor_email", user.email)
         values["status"] = CourseStatus.DRAFT
     course = Course(**values)
+    if is_admin(user) and values.get("status") == CourseStatus.PUBLISHED:
+        course.review_status = "APPROVED"
+        course.reviewed_by = user.id
+        course.reviewed_at = datetime.utcnow()
     db.session.add(course)
     try:
+        if course.review_status == "APPROVED":
+            db.session.flush()
+            db.session.add(CourseReview(course_id=course.id, status="APPROVED", reviewed_by=user.id,
+                                       reviewed_at=course.reviewed_at, review_version=course.review_version))
         db.session.commit()
     except IntegrityError:
         db.session.rollback()
@@ -139,6 +153,15 @@ def update_course(course_id):
         setattr(course, field, value)
 
     try:
+        course_content_changed(course.id)
+        if is_admin(current_user()) and "status" in values:
+            course.review_status = "APPROVED" if course.status == CourseStatus.PUBLISHED else "PENDING"
+            course.review_reason = None
+            course.reviewed_by = current_user().id if course.review_status == "APPROVED" else None
+            course.reviewed_at = datetime.utcnow() if course.review_status == "APPROVED" else None
+            if course.review_status == "APPROVED":
+                db.session.add(CourseReview(course_id=course.id, status="APPROVED", reviewed_by=course.reviewed_by,
+                                           reviewed_at=course.reviewed_at, review_version=course.review_version))
         db.session.commit()
     except IntegrityError:
         db.session.rollback()
@@ -215,10 +238,14 @@ def _visible_courses_query():
     user = current_user()
     if user is None:
         return query.where(Course.status == CourseStatus.PUBLISHED)
-    if is_admin(user):
+    if is_course_reviewer(user):
         return query
     if is_approved_instructor(user):
-        return query.where((Course.status == CourseStatus.PUBLISHED) | (Course.owner_id == user.id))
+        assigned_courses = select(CourseTeachingApplication.course_id).where(
+            CourseTeachingApplication.teacher_id == user.id,
+            CourseTeachingApplication.status == ApplicationStatus.APPROVED,
+        )
+        return query.where((Course.status == CourseStatus.PUBLISHED) | (Course.owner_id == user.id) | Course.id.in_(assigned_courses))
     return query.where(Course.status == CourseStatus.PUBLISHED)
 
 
@@ -241,11 +268,11 @@ def _validated_values(payload, require_required_fields):
         if db.session.get(Department, payload["department_id"]) is None:
             return None, _error("Department not found", 404)
 
-    if "owner_id" in payload and payload["owner_id"] is not None:
+    if "owner_id" in payload:
         user = current_user()
         if not is_admin(user):
             return None, _error("Only admins can assign course ownership", 403)
-        if not isinstance(payload["owner_id"], int) or payload["owner_id"] <= 0:
+        if payload["owner_id"] is not None and (not isinstance(payload["owner_id"], int) or payload["owner_id"] <= 0):
             return None, _error("owner_id must be a positive integer or null", 400)
 
     if "title" in payload:
@@ -358,6 +385,9 @@ def _serialize_course(course):
         "display_order": course.display_order,
         "created_at": course.created_at.isoformat() if course.created_at else None,
         "updated_at": course.updated_at.isoformat() if course.updated_at else None,
+        "review_status": course.review_status,
+        "review_reason": course.review_reason if can_manage_course(course.id) or is_course_reviewer() else None,
+        "review_version": course.review_version,
     }
 
 

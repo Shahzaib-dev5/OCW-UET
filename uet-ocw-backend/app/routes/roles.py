@@ -11,6 +11,7 @@ roles_bp = Blueprint("roles", __name__, url_prefix="/api/roles")
 
 DEFAULT_ROLES = {
     "ADMIN": "Full access to all OCW management APIs",
+    "MODERATOR": "Can view submitted courses and materials and approve or reject publication; cannot create or edit content",
     "TEACHER": "Can apply to teach courses and manage resources for approved courses",
     "STUDENT": "Can apply for courses and view resources after approval",
 }
@@ -28,6 +29,7 @@ def get_roles():
 
 
 @roles_bp.route("/seed", methods=["POST"])
+@require_roles(ADMIN)
 def seed_roles():
     for name, description in DEFAULT_ROLES.items():
         role = db.session.scalar(select(Role).where(Role.name == name))

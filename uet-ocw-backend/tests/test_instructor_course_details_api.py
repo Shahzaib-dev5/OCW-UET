@@ -104,7 +104,7 @@ class InstructorCourseDetailsApiTests(TestCase):
             db.session.remove()
             db.engine.dispose()
 
-    def test_owner_can_save_course_details_without_changing_approval_or_slug(self):
+    def test_owner_can_save_course_details_and_submit_changes_for_review(self):
         details = {
             "title": "Updated course name",
             "short_description": "Updated summary",
@@ -116,10 +116,12 @@ class InstructorCourseDetailsApiTests(TestCase):
         }
         response = self.client.patch("/api/courses/1", headers=self.headers[1], json=details)
         self.assertEqual(response.status_code, 200, response.get_data(as_text=True))
-        saved = self.client.get("/api/courses/1").get_json()["data"]
+        saved = self.client.get("/api/courses/1", headers=self.headers[1]).get_json()["data"]
         for field, value in details.items():
             self.assertEqual(saved[field], value)
-        self.assertEqual(saved["status"], "PUBLISHED")
+        self.assertEqual(saved["status"], "DRAFT")
+        self.assertEqual(saved["review_status"], "PENDING")
+        self.assertEqual(self.client.get("/api/courses/1").status_code, 404)
         self.assertEqual(saved["slug"], "original-course")
         self.assertEqual(saved["owner_id"], 1)
 
@@ -150,7 +152,7 @@ class InstructorCourseDetailsApiTests(TestCase):
             json={"description": "", "syllabus": "", "thumbnail": None},
         )
         self.assertEqual(response.status_code, 200, response.get_data(as_text=True))
-        saved = self.client.get("/api/courses/1").get_json()["data"]
+        saved = self.client.get("/api/courses/1", headers=self.headers[1]).get_json()["data"]
         self.assertEqual(saved["description"], "")
         self.assertEqual(saved["syllabus"], "")
         self.assertIsNone(saved["thumbnail"])
@@ -198,9 +200,10 @@ class InstructorCourseDetailsApiTests(TestCase):
             "/api/courses/1", headers=self.headers[1], json={"thumbnail": image_url},
         )
         self.assertEqual(response.status_code, 200, response.get_data(as_text=True))
-        public_course = self.client.get("/api/courses/1").get_json()["data"]
-        self.assertEqual(public_course["thumbnail"], image_url)
-        image_response = self.client.get(image_url)
+        saved_course = self.client.get("/api/courses/1", headers=self.headers[1]).get_json()["data"]
+        self.assertEqual(saved_course["thumbnail"], image_url)
+        self.assertEqual(self.client.get(image_url).status_code, 403)
+        image_response = self.client.get(image_url, headers=self.headers[1])
         self.assertEqual(image_response.status_code, 200)
         self.assertEqual(image_response.data, image_bytes)
         image_response.close()

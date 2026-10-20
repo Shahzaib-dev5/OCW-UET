@@ -170,6 +170,12 @@ class Course(db.Model):
         server_default="0",
     )
 
+    review_status = db.Column(db.String(20), nullable=False, default="PENDING", server_default="PENDING", index=True)
+    review_reason = db.Column(db.Text, nullable=True)
+    reviewed_by = db.Column(BigIntegerUnsigned, db.ForeignKey("users.id", name="fk_courses_reviewer", ondelete="SET NULL"), nullable=True)
+    reviewed_at = db.Column(db.DateTime, nullable=True)
+    review_version = db.Column(db.Integer, nullable=False, default=0, server_default="0")
+
     created_at = db.Column(
         db.DateTime,
         server_default=db.func.current_timestamp(),
@@ -187,6 +193,7 @@ class Course(db.Model):
         back_populates="courses",
     )
     owner = db.relationship("User", foreign_keys=[owner_id])
+    reviewer = db.relationship("User", foreign_keys=[reviewed_by])
 
     lectures = db.relationship(
         "Lecture",

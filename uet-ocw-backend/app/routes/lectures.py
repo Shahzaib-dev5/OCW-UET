@@ -6,6 +6,7 @@ from app.extensions import db
 from app.models.course import Course
 from app.models.lecture import Lecture
 from app.services.authz import can_manage_course, can_view_course_learning, can_view_course_record, can_view_course_resources, current_user
+from app.services.course_moderation import course_content_changed
 
 
 lectures_bp = Blueprint(
@@ -95,6 +96,7 @@ def create_lecture():
     lecture = Lecture(**values)
     db.session.add(lecture)
     try:
+        course_content_changed(lecture.course_id)
         db.session.commit()
     except IntegrityError:
         db.session.rollback()
@@ -120,13 +122,16 @@ def update_lecture(lecture_id):
     if error:
         return error
     target_course_id = values.get("course_id", lecture.course_id)
-    if not can_manage_course(target_course_id):
+    previous_course_id = lecture.course_id
+    if not can_manage_course(previous_course_id) or not can_manage_course(target_course_id):
         return _error("Only admin or an approved teacher can update lectures for this course", 403)
 
     for field, value in values.items():
         setattr(lecture, field, value)
 
     try:
+        for changed_course_id in sorted({previous_course_id, target_course_id}):
+            course_content_changed(changed_course_id)
         db.session.commit()
     except IntegrityError:
         db.session.rollback()
@@ -148,6 +153,7 @@ def delete_lecture(lecture_id):
 
     db.session.delete(lecture)
     try:
+        course_content_changed(lecture.course_id)
         db.session.commit()
     except IntegrityError:
         db.session.rollback()

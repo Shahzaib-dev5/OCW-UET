@@ -16,6 +16,7 @@ users_bp = Blueprint("users", __name__, url_prefix="/api/users")
 
 DEFAULT_ROLE_DESCRIPTIONS = {
     "ADMIN": "Full access to all OCW management APIs",
+    "MODERATOR": "Can review course content and approve or reject publication",
     "TEACHER": "Can apply to teach courses and manage resources for approved courses",
     "STUDENT": "Can apply for courses and view resources after approval",
 }
@@ -155,7 +156,7 @@ def _role_from_payload(payload):
             db.session.add(role)
             db.session.flush()
         else:
-            return None, _error("Role not found. Use role ADMIN, TEACHER, or STUDENT", 404)
+            return None, _error("Role not found. Use role ADMIN, MODERATOR, TEACHER, or STUDENT", 404)
     return role, None
 
 

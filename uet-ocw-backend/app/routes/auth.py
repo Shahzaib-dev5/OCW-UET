@@ -5,7 +5,7 @@ import smtplib
 from datetime import datetime, timedelta
 from email.message import EmailMessage
 
-from flask import Blueprint, jsonify, request
+from flask import Blueprint, current_app, jsonify, request
 from flask_jwt_extended import create_access_token
 from sqlalchemy import select
 from sqlalchemy.exc import IntegrityError
@@ -16,12 +16,13 @@ from google.oauth2 import id_token as google_id_token
 from app.extensions import db
 from app.models.role import Role
 from app.models.user import User
-from app.services.authz import current_user
+from app.services.authz import current_user, is_approved_instructor
 
 auth_bp = Blueprint("auth", __name__, url_prefix="/api/auth")
 
 DEFAULT_ROLE_DESCRIPTIONS = {
     "ADMIN": "Full access to all OCW management APIs",
+    "MODERATOR": "Can review course content and approve or reject publication",
     "TEACHER": "Can apply to teach courses and manage resources for approved courses",
     "STUDENT": "Can apply for courses and view resources after approval",
 }
@@ -66,7 +67,8 @@ def register():
 
     email = payload["email"].strip().lower()
     username = (payload.get("username") or email.split("@")[0]).strip()
-    otp = _new_otp()
+    otp_enabled = current_app.config.get("EMAIL_OTP_ENABLED", False)
+    otp = _new_otp() if otp_enabled else None
     user = User(
         role_id=role.id,
         username=username,
@@ -74,8 +76,8 @@ def register():
         password_hash=generate_password_hash(payload["password"]),
         full_name=payload.get("full_name") or username,
         email_verified=False,
-        email_otp_hash=generate_password_hash(otp),
-        email_otp_expires_at=datetime.utcnow() + timedelta(minutes=10),
+        email_otp_hash=generate_password_hash(otp) if otp else None,
+        email_otp_expires_at=datetime.utcnow() + timedelta(minutes=10) if otp else None,
         email_otp_attempts=0,
         **profile_values,
     )
@@ -85,6 +87,15 @@ def register():
     except IntegrityError:
         db.session.rollback()
         return _error("Username, email, or CNIC already exists", 409)
+    if not otp_enabled:
+        return jsonify({
+            "status": "success",
+            "message": "Account created.",
+            "verification_required": False,
+            "access_token": create_access_token(identity=str(user.id)),
+            "data": _serialize_user(user),
+            "return_to": payload.get("return_to"),
+        }), 201
     if not _send_email_otp(user.email, otp):
         return _error("Email OTP service is not configured", 503)
 
@@ -122,7 +133,7 @@ def login():
         return _error("Invalid email/username or password", 401)
     if not user.is_active:
         return _error("User account is inactive", 403)
-    if not user.email_verified:
+    if current_app.config.get("EMAIL_OTP_ENABLED", False) and not user.email_verified:
         return _error("Email verification required. Please verify your OTP before login.", 403)
 
     user.last_login = datetime.utcnow()
@@ -221,6 +232,8 @@ def google_auth():
 
 @auth_bp.route("/verify-email-otp", methods=["POST"])
 def verify_email_otp():
+    if not current_app.config.get("EMAIL_OTP_ENABLED", False):
+        return _error("Email OTP verification is temporarily disabled. Sign in with your password.", 409)
     payload = request.get_json(silent=True)
     if not isinstance(payload, dict):
         return _error("Request body must be a JSON object", 400)
@@ -237,8 +250,9 @@ def verify_email_otp():
     if user is None:
         return _error("Invalid or expired OTP", 400)
     if user.email_verified:
-        token = create_access_token(identity=str(user.id))
-        return jsonify({"status": "success", "access_token": token, "data": _serialize_user(user), "return_to": payload.get("return_to")})
+        return _error("Email already verified. Sign in with your password.", 409)
+    if not user.is_active:
+        return _error("User account is inactive", 403)
     if not user.email_otp_hash or not user.email_otp_expires_at or user.email_otp_expires_at < datetime.utcnow():
         return _error("Invalid or expired OTP", 400)
     if user.email_otp_attempts >= 5:
@@ -260,6 +274,8 @@ def verify_email_otp():
 
 @auth_bp.route("/resend-email-otp", methods=["POST"])
 def resend_email_otp():
+    if not current_app.config.get("EMAIL_OTP_ENABLED", False):
+        return _error("Email OTP verification is temporarily disabled. Sign in with your password.", 409)
     payload = request.get_json(silent=True)
     if not isinstance(payload, dict):
         return _error("Request body must be a JSON object", 400)
@@ -356,7 +372,7 @@ def _role_from_payload(payload):
             db.session.add(role)
             db.session.flush()
         else:
-            return None, _error("Role not found. Use role ADMIN, TEACHER, or STUDENT", 404)
+            return None, _error("Role not found. Use role ADMIN, MODERATOR, TEACHER, or STUDENT", 404)
     logged_in_user = current_user()
     logged_in_role = logged_in_user.role.name if logged_in_user and logged_in_user.role else None
     if role.name != "STUDENT" and logged_in_role != "ADMIN":
@@ -398,7 +414,7 @@ def _serialize_user(user):
         "auth_provider": user.auth_provider,
         "email_verified": user.email_verified,
         "instructor_status": user.instructor_status,
-        "is_approved_instructor": (user.instructor_status or "").upper() == "APPROVED",
+        "is_approved_instructor": is_approved_instructor(user),
         "last_login": user.last_login.isoformat() if user.last_login else None,
         "created_at": user.created_at.isoformat() if user.created_at else None,
         "updated_at": user.updated_at.isoformat() if user.updated_at else None,

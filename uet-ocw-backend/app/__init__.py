@@ -1,9 +1,11 @@
 import mimetypes
 import os
+import posixpath
+import re
 from pathlib import Path
 
-from flask import Flask, jsonify, render_template_string, send_from_directory
-from sqlalchemy import or_, select
+from flask import Flask, jsonify, render_template_string, request, send_from_directory
+from sqlalchemy import func, or_, select
 
 from config import Config
 from app.extensions import db, migrate, cors, jwt
@@ -19,6 +21,23 @@ def create_app(config_class=Config):
     migrate.init_app(app, db)
     cors.init_app(app)
     jwt.init_app(app)
+
+    @app.before_request
+    def limit_moderator_writes():
+        # Enforce the review-only role across all present and future API writes.
+        if request.method in {"GET", "HEAD", "OPTIONS"} or not request.path.startswith("/api/"):
+            return None
+        allowed = {
+            "moderation.approve_course", "moderation.reject_course",
+            "auth.login", "auth.google_auth", "auth.verify_email_otp", "auth.resend_email_otp",
+            "auth.forgot_password", "auth.reset_password", "auth.logout",
+        }
+        if request.endpoint in allowed:
+            return None
+        from app.services.authz import MODERATOR, role_name
+        if role_name() == MODERATOR:
+            return jsonify(status="error", message="Moderators may only view content and approve or reject courses"), 403
+        return None
 
     @app.route("/openapi.json")
     def openapi_json():
@@ -157,6 +176,8 @@ def create_app(config_class=Config):
     from app.routes.course_teaching_applications import course_teaching_applications_bp
     from app.routes.course_enrollments import course_enrollments_bp
     from app.routes.instructor_applications import instructor_applications_bp
+    from app.routes.moderation import moderation_bp
+    from app.routes.moderator_dashboard import moderator_dashboard_bp
 
     # Register routes
     app.register_blueprint(admin_dashboard_bp)
@@ -183,33 +204,37 @@ def create_app(config_class=Config):
     app.register_blueprint(course_teaching_applications_bp)
     app.register_blueprint(course_enrollments_bp)
     app.register_blueprint(instructor_applications_bp)
+    app.register_blueprint(moderation_bp)
+    app.register_blueprint(moderator_dashboard_bp)
 
     return app
 
 
 def _can_serve_upload(filename):
-    normalized = f"/uploads/{filename}".replace("\\", "/")
+    # Match the path that send_from_directory will resolve, including aliases
+    # containing dot segments and case variants on Windows installations.
+    normalized = posixpath.normpath(f"/uploads/{filename}".replace("\\", "/")).lower()
     with db.session.no_autoflush:
         from app.models.course import Course
         from app.models.internship import Internship
         from app.models.internship_resource import InternshipResource
         from app.models.lecture import Lecture
         from app.models.resource import CourseResource
-        from app.services.authz import can_view_book_learning, can_view_course_learning, can_view_skill_learning
+        from app.services.authz import can_view_book_learning, can_view_course_learning, can_view_course_record, can_view_skill_learning
 
-        course = db.session.scalar(select(Course).where(Course.thumbnail == normalized).limit(1))
+        course = db.session.scalar(select(Course).where(func.lower(Course.thumbnail) == normalized).limit(1))
         if course is not None:
-            return True
-        skill = db.session.scalar(select(Internship).where(Internship.thumbnail == normalized).limit(1))
+            return can_view_course_record(course)
+        skill = db.session.scalar(select(Internship).where(func.lower(Internship.thumbnail) == normalized).limit(1))
         if skill is not None:
             return True
 
         lecture = db.session.scalar(
             select(Lecture).where(
                 or_(
-                    Lecture.video_url == normalized,
-                    Lecture.presentation_url == normalized,
-                    Lecture.notes_url == normalized,
+                    func.lower(Lecture.video_url) == normalized,
+                    func.lower(Lecture.presentation_url) == normalized,
+                    func.lower(Lecture.notes_url) == normalized,
                 )
             ).limit(1)
         )
@@ -217,7 +242,8 @@ def _can_serve_upload(filename):
             return can_view_course_learning(lecture.course_id)
 
         course_resource = db.session.scalar(
-            select(CourseResource).where(CourseResource.file_url == normalized).limit(1)
+            select(CourseResource).where(or_(func.lower(CourseResource.file_url) == normalized, func.lower(CourseResource.external_url) == normalized,
+                                            func.lower(CourseResource.thumbnail) == normalized)).limit(1)
         )
         if course_resource is not None:
             if course_resource.resource_type and course_resource.resource_type.value == "BOOK":
@@ -225,10 +251,15 @@ def _can_serve_upload(filename):
             return can_view_course_learning(course_resource.course_id)
 
         skill_resource = db.session.scalar(
-            select(InternshipResource).where(InternshipResource.file_url == normalized).limit(1)
+            select(InternshipResource).where(func.lower(InternshipResource.file_url) == normalized).limit(1)
         )
         if skill_resource is not None:
             return can_view_skill_learning(skill_resource.internship_id)
+
+        # Uploads may exist before a lecture/resource row has been attached.
+        course_path = re.match(r"^/uploads/courses/(\d+)(?:/|$)", normalized)
+        if course_path:
+            return can_view_course_learning(int(course_path.group(1)))
 
     return True
 
@@ -244,6 +275,7 @@ def _build_openapi_spec(app):
         {"name": "Faculties", "description": "Faculty management APIs"},
         {"name": "Departments", "description": "Department management APIs"},
         {"name": "Courses", "description": "Course management APIs"},
+        {"name": "Course Moderation", "description": "ADMIN/MODERATOR review queue, preview and publication decisions"},
         {"name": "Course Resources", "description": "Course resource upload and management APIs"},
         {"name": "Lectures", "description": "Lecture management APIs"},
         {"name": "Authors", "description": "Research author management APIs"},
@@ -270,6 +302,8 @@ def _build_openapi_spec(app):
             "teacher_dashboard.teacher_index",
             "teacher_dashboard.teacher_login",
             "teacher_dashboard.teacher_dashboard",
+            "moderator_dashboard.moderator_index",
+            "moderator_dashboard.moderator_dashboard",
         }:
             continue
 
@@ -289,6 +323,8 @@ def _build_openapi_spec(app):
                     "200": {"description": "Successful response"},
                     "201": {"description": "Created"},
                     "400": {"description": "Bad request"},
+                    "401": {"description": "Authentication required"},
+                    "403": {"description": "Insufficient permissions"},
                     "404": {"description": "Not found"},
                     "409": {"description": "Conflict"},
                     "500": {"description": "Server error"}
@@ -327,6 +363,22 @@ def _build_openapi_spec(app):
                     "content": request_content,
                 }
 
+            if path.startswith("/api/moderation/"):
+                operation["security"] = [{"bearerAuth": []}]
+                operation["description"] = "Available only to ADMIN and MODERATOR. Moderators cannot create, edit, delete or upload content."
+                if path == "/api/moderation/courses" and method == "get":
+                    operation["parameters"] += [
+                        {"name": name, "in": "query", "schema": {"type": "integer", "minimum": 1}}
+                        for name in ("faculty_id", "department_id", "instructor_id", "page", "per_page")
+                    ] + [
+                        {"name": "status", "in": "query", "schema": {"type": "string", "enum": ["PENDING", "APPROVED", "REJECTED", "ALL"], "default": "PENDING"}},
+                        {"name": "q", "in": "query", "schema": {"type": "string", "maxLength": 200}},
+                    ]
+                if method == "post":
+                    schema = operation["requestBody"]["content"]["application/json"]["schema"]
+                    schema["additionalProperties"] = False
+                    schema["required"] = ["review_version"] + (["reason"] if path.endswith("/reject") else [])
+                    operation["responses"]["409"]["description"] = "Course content or review changed; reload the preview before deciding"
             paths[path][method] = operation
 
     return {
@@ -337,9 +389,10 @@ def _build_openapi_spec(app):
             "description": "OpenAPI documentation for all project APIs"
         },
         "tags": tags,
+        "components": {"securitySchemes": {"bearerAuth": {"type": "http", "scheme": "bearer", "bearerFormat": "JWT"}}},
         "x-tagGroups": [
             {"name": "Core", "tags": ["Auth", "Roles", "Users", "Menu", "Media"]},
-            {"name": "Academic", "tags": ["Faculties", "Departments", "Courses", "Course Resources", "Lectures", "Authors", "Research Paper Authors", "Skills Development", "Skills Development Resources", "Invited Talks", "Research Papers", "Course Teaching Applications", "Course Enrollments"]},
+            {"name": "Academic", "tags": ["Faculties", "Departments", "Courses", "Course Moderation", "Course Resources", "Lectures", "Authors", "Research Paper Authors", "Skills Development", "Skills Development Resources", "Invited Talks", "Research Papers", "Course Teaching Applications", "Course Enrollments"]},
         ],
         "paths": paths,
     }
@@ -361,6 +414,11 @@ def _build_path_parameters(path):
 
 
 def _schema_for_route(path):
+    if path.startswith('/api/moderation/'):
+        return {
+            "review_version": {"type": "integer", "minimum": 0, "example": 0, "description": "Version returned by the course preview; stale versions receive 409"},
+            "reason": {"type": "string", "maxLength": 2000, "example": "Please replace the unreadable lecture notes", "description": "Required when rejecting a course"},
+        }
     if '/api/faculties' in path:
         return {
             "name": {"type": "string", "example": "Computer Science"},
@@ -567,6 +625,8 @@ def _schema_for_route(path):
 
 
 def _tag_for_path(path):
+    if "/api/moderation/" in path:
+        return "Course Moderation"
     if "/api/auth" in path and "/api/authors" not in path:
         return "Auth"
     if "/api/roles" in path:

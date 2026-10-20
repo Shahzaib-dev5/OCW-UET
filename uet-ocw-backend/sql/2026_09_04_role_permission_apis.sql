@@ -1,5 +1,6 @@
 INSERT IGNORE INTO `roles` (`name`, `description`) VALUES
   ('ADMIN', 'Full access to all OCW management APIs'),
+  ('MODERATOR', 'Can view submitted course content and approve or reject publication only'),
   ('TEACHER', 'Can apply to teach courses and manage resources for approved courses'),
   ('STUDENT', 'Can apply for courses and view resources after approval');
 

@@ -2,7 +2,7 @@ from typing import Literal, NotRequired, TypedDict
 
 
 ApplicationStatus = Literal["PENDING", "APPROVED", "REJECTED"]
-RoleName = Literal["ADMIN", "TEACHER", "STUDENT"]
+RoleName = Literal["ADMIN", "MODERATOR", "TEACHER", "STUDENT"]
 
 
 class RolePayload(TypedDict, total=False):

@@ -13,6 +13,7 @@ from app.models.user import User
 
 
 ADMIN = "ADMIN"
+MODERATOR = "MODERATOR"
 TEACHER = "TEACHER"
 STUDENT = "STUDENT"
 
@@ -50,6 +51,8 @@ def role_name(user=None):
         return TEACHER
     if name in {"ADMINS", "ADMIN", "SUPERADMIN", "SUPER_ADMIN"}:
         return ADMIN
+    if name in {"MODERATOR", "MODERATORS"}:
+        return MODERATOR
     return name
 
 
@@ -77,9 +80,13 @@ def is_admin(user=None):
     return role_name(user) == ADMIN
 
 
+def is_course_reviewer(user=None):
+    return role_name(user) in {ADMIN, MODERATOR}
+
+
 def is_approved_instructor(user=None):
     user = user or current_user()
-    if user is None:
+    if user is None or role_name(user) == MODERATOR:
         return False
     status = (user.instructor_status or "").upper()
     if status == ApplicationStatus.REVOKED.value:
@@ -120,9 +127,9 @@ def can_view_course_record(course_or_id):
     user = current_user()
     if user is None:
         return False
-    if is_admin(user):
+    if is_course_reviewer(user):
         return True
-    return is_approved_instructor(user) and course.owner_id == user.id
+    return can_manage_course(course.id)
 
 
 def can_view_course_resources(course_id):
@@ -134,12 +141,14 @@ def can_view_course_learning(course_id):
     if course is None:
         return False
     user = current_user()
+    if user is not None and is_course_reviewer(user):
+        return True
     if course.status != CourseStatus.PUBLISHED:
         if user is None:
             return False
         if is_admin(user):
             return True
-        return is_approved_instructor(user) and course.owner_id == user.id
+        return can_manage_course(course.id)
     if course.login_required and user is None:
         return False
     if _access_value(course.access_level) == AccessLevel.PUBLIC.value:
@@ -148,7 +157,7 @@ def can_view_course_learning(course_id):
         return False
     if is_admin(user):
         return True
-    if is_approved_instructor(user) and course.owner_id == user.id:
+    if can_manage_course(course.id):
         return True
 
     return db.session.scalar(
@@ -195,6 +204,10 @@ def can_view_book_learning(book_id):
     book = db.session.get(CourseResource, book_id)
     if book is None:
         return False
+    if book.course_id and not can_view_course_learning(book.course_id):
+        return False
+    if is_course_reviewer():
+        return True
     if _access_value(book.access_level) == AccessLevel.PUBLIC.value:
         return True
     user = current_user()
