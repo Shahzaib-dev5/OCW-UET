@@ -291,6 +291,7 @@ export default function BooksPage() {
 
           <form className="course-toolbar" role="search" onSubmit={(event) => event.preventDefault()}>
             <select
+              className="faculty-filter"
               aria-label="Faculty"
               value={selectedFacultyId || ''}
               onChange={(event) => {
@@ -298,7 +299,7 @@ export default function BooksPage() {
                 setSelectedDepartmentId(null)
               }}
             >
-              <option value="">All faculties</option>
+              <option value="">All Faculties / Centers</option>
               {faculties.map((faculty) => (
                 <option key={faculty.id} value={faculty.id}>
                   {faculty.name}
@@ -306,11 +307,12 @@ export default function BooksPage() {
               ))}
             </select>
             <select
+              className="department-filter"
               aria-label="Department"
               value={selectedDepartmentId || ''}
               onChange={(event) => setSelectedDepartmentId(event.target.value)}
             >
-              <option value="">All departments</option>
+              <option value="">All Departments / Labs</option>
               {facultyDepartments.map((department) => (
                 <option key={department.id} value={department.id}>
                   {department.name}

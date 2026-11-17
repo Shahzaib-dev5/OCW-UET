@@ -1336,6 +1336,16 @@ p {
   flex: 0 0 190px;
 }
 
+.course-toolbar .faculty-filter {
+  min-width: 230px;
+  flex-basis: 230px;
+}
+
+.course-toolbar .department-filter {
+  min-width: 250px;
+  flex-basis: 250px;
+}
+
 .course-toolbar input:focus,
 .course-toolbar select:focus,
 .course-pill:focus-visible,
