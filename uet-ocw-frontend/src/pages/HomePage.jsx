@@ -2,6 +2,9 @@ import { useEffect, useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
 import TitleImageFallback from '../components/TitleImageFallback'
 import { fetchJson, fileUrl } from '../data/api'
+import uetLogo from '../assets/uet-logo.png'
+import kicsLogo from '../assets/kics-logo.png'
+import ulefLogo from '../assets/ulef-logo.png'
 
 export default function HomePage() {
   const [courses, setCourses] = useState([])
@@ -39,15 +42,36 @@ export default function HomePage() {
       <section className="home-hero-banner">
         <div className="container">
           <div className="home-hero-content">
-            <p className="eyebrow">UET Open Courseware</p>
-            <h2>Learning resources, courses and opportunities in one place.</h2>
+            <p className="home-hero-label">UET Lahore Open Courseware</p>
+            <h2>Knowledge, openly shared.</h2>
             <p>
-              Explore academic modules, course material, tech talks and skills development pathways from the University of Engineering and Technology.
+              Learn beyond the classroom with open courses, books, technical talks and practical development pathways from UET Lahore.
             </p>
             <div className="home-hero-actions">
               <Link className="primary-button" to="/courses">Explore Courses</Link>
-              <Link className="secondary-button light" to="/skills-development">View Skills Development</Link>
+              <Link className="secondary-button light" to="/books">Browse the Library</Link>
             </div>
+          </div>
+          <aside className="home-hero-note" aria-label="Open learning commitment">
+            <span>Open access</span>
+            <strong>Academic resources for every learner</strong>
+            <p>Discover material organized by faculty, department and course.</p>
+          </aside>
+        </div>
+      </section>
+
+      <section className="institution-strip" aria-label="Open Courseware institutions">
+        <div className="container institution-strip-inner">
+          <div className="institution-copy">
+            <p>Presented by</p>
+            <strong>University expertise. Technology leadership. Learning uplift.</strong>
+          </div>
+          <div className="institution-logos">
+            <div><img src={uetLogo} alt="UET Lahore logo" /><span>UET Lahore</span></div>
+            <i aria-hidden="true" />
+            <div><img src={kicsLogo} alt="KICS logo" /><span>KICS</span></div>
+            <i aria-hidden="true" />
+            <div className="institution-ulef"><img src={ulefLogo} alt="Uplift Learning and Education Foundation logo" /><span>Supported by ULEF</span></div>
           </div>
         </div>
       </section>
@@ -56,33 +80,34 @@ export default function HomePage() {
         {error && <div className="alert-box">{error}</div>}
 
         <section className="home-section-heading">
-          <p className="eyebrow">Academic modules</p>
-          <h2>Start with the area you need</h2>
+          <p className="eyebrow">Explore open learning</p>
+          <h2>Choose your way into the collection</h2>
+          <p className="home-section-intro">From complete courses to focused reading and practical programs, find a path that fits what you want to learn.</p>
         </section>
 
         <section className="module-grid">
           <Link className="module-card" to="/courses">
-            <span>01</span>
+            <span className="module-card-kicker">Learn</span>
             <strong>Courses</strong>
             <p>Browse course details, teachers, lectures and learning material.</p>
           </Link>
           <Link className="module-card" to="/skills-development">
-            <span>02</span>
+            <span className="module-card-kicker">Practice</span>
             <strong>Skills Development</strong>
             <p>Find practical learning opportunities and supporting resources.</p>
           </Link>
           <Link className="module-card" to="/books">
-            <span>03</span>
+            <span className="module-card-kicker">Read</span>
             <strong>Books</strong>
             <p>Browse course books and reading resources in a dedicated library.</p>
           </Link>
           <Link className="module-card" to="/research">
-            <span>04</span>
+            <span className="module-card-kicker">Discover</span>
             <strong>Research</strong>
             <p>Review academic papers, publications and department research work.</p>
           </Link>
           <Link className="module-card" to="/about">
-            <span>05</span>
+            <span className="module-card-kicker">Our mission</span>
             <strong>About OCW</strong>
             <p>Learn how the portal organizes academic information for students.</p>
           </Link>

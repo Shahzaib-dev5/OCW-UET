@@ -4,6 +4,7 @@ from sqlalchemy.exc import IntegrityError, OperationalError
 
 from app.extensions import db
 from app.models.course import AccessLevel, Course
+from app.models.department import Department
 from app.models.resource import CourseResource, CourseResourceType
 from app.services.authz import can_manage_course, can_view_book_learning, can_view_course_learning, can_view_course_record, can_view_course_resources, current_user, enrollment_status_for, is_admin, is_approved_instructor
 from app.services.course_moderation import course_content_changed
@@ -129,8 +130,15 @@ def update_course_resource(resource_id):
         return _error("Only admin or an approved teacher can update resources for this course", 403)
     previous_course_id = resource.course_id
     target_course_id = values.get("course_id", resource.course_id)
+    target_department_id = values.get("department_id", resource.department_id)
     target_type = values.get("resource_type", resource.resource_type)
-    if not _can_manage_resource({"course_id": target_course_id, "resource_type": target_type}):
+    if target_course_id is not None and target_department_id is not None:
+        return _error("A resource cannot belong to both a course and a department", 400)
+    if not _can_manage_resource({
+        "course_id": target_course_id,
+        "department_id": target_department_id,
+        "resource_type": target_type,
+    }):
         return _error("You cannot move this resource to the selected course", 403)
 
     for field, value in values.items():
@@ -174,6 +182,7 @@ def delete_course_resource(resource_id):
 
 _COURSE_RESOURCE_FIELDS = {
     "course_id",
+    "department_id",
     "access_level",
     "title",
     "resource_type",
@@ -212,6 +221,15 @@ def _validated_values(payload, require_required_fields):
             return None, _error("course_id must be a positive integer or null", 400)
         if db.session.get(Course, payload["course_id"]) is None:
             return None, _error("Course not found", 404)
+
+    if "department_id" in payload and payload["department_id"] is not None:
+        if not isinstance(payload["department_id"], int) or payload["department_id"] <= 0:
+            return None, _error("department_id must be a positive integer or null", 400)
+        if db.session.get(Department, payload["department_id"]) is None:
+            return None, _error("Department not found", 404)
+
+    if payload.get("course_id") is not None and payload.get("department_id") is not None:
+        return None, _error("A resource cannot belong to both a course and a department", 400)
 
     if "title" in payload:
         if not isinstance(payload["title"], str) or not payload["title"].strip():
@@ -259,9 +277,13 @@ def _validated_values(payload, require_required_fields):
 
 def _can_manage_resource(values):
     course_id = values.get("course_id")
+    department_id = values.get("department_id")
     resource_type = values.get("resource_type")
     if course_id is not None:
         return can_manage_course(course_id)
+    if department_id is not None and resource_type == CourseResourceType.BOOK:
+        user = current_user()
+        return user is not None and (is_admin(user) or is_approved_instructor(user))
     if resource_type == CourseResourceType.BOOK:
         user = current_user()
         return user is not None and (is_admin(user) or is_approved_instructor(user))
@@ -289,6 +311,8 @@ def _serialize_resource(resource):
     return {
         "id": resource.id,
         "course_id": resource.course_id,
+        "department_id": resource.department_id,
+        "department": _serialize_department(resource.department) if resource.department else None,
         "owner_id": resource.owner_id,
         "course": _serialize_course(resource.course) if resource.course else None,
         "title": resource.title,
@@ -319,6 +343,15 @@ def _serialize_course(course):
         "title": course.title,
         "slug": course.slug,
         "status": course.status.value if course.status else None,
+    }
+
+
+def _serialize_department(department):
+    return {
+        "id": department.id,
+        "faculty_id": department.faculty_id,
+        "name": department.name,
+        "short_name": department.short_name,
     }
 
 

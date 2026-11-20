@@ -2,6 +2,8 @@ import { useEffect, useRef, useState } from 'react'
 import { NavLink } from 'react-router-dom'
 import { useAuth } from '../auth/AuthContext'
 import uetLogo from '../assets/uet-logo.png'
+import kicsLogo from '../assets/kics-logo.png'
+import ulefLogo from '../assets/ulef-logo.png'
 
 export default function Layout({ children }) {
   const year = new Date().getFullYear()
@@ -65,9 +67,12 @@ export default function Layout({ children }) {
     <div className="site-shell">
       <header className="site-header">
         <div className="container nav-bar">
-          <div className="brand-wrap">
+          <div className="brand-wrap" aria-label="UET Lahore Open Courseware">
             <img className="brand-mark" src={uetLogo} alt="UET Lahore logo" />
-            <h1>Open Courseware</h1>
+            <div className="brand-name">
+              <small>UET Lahore</small>
+              <h1>Open Courseware</h1>
+            </div>
           </div>
 
           <button
@@ -162,6 +167,18 @@ export default function Layout({ children }) {
               Explore course material, skills development resources, and tech talks from University of
               Engineering and Technology Lahore.
             </p>
+            <p className="footer-sponsor-line">
+              Open Courseware is supported by the Uplift Learning and Education Foundation (ULEF).
+            </p>
+          </section>
+
+          <section className="footer-partners" aria-label="Institutional partners">
+            <h3>Partners</h3>
+            <div className="footer-partner-logos">
+              <div><img src={uetLogo} alt="UET Lahore logo" /><span>UET Lahore</span></div>
+              <div><img src={kicsLogo} alt="KICS logo" /><span>KICS</span></div>
+              <div className="footer-partner-ulef"><img src={ulefLogo} alt="Uplift Learning and Education Foundation logo" /><span>ULEF</span></div>
+            </div>
           </section>
 
           <nav className="footer-links" aria-label="Footer navigation">

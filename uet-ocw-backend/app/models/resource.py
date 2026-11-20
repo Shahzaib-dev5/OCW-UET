@@ -34,6 +34,16 @@ class CourseResource(db.Model):
         nullable=True,
         index=True,
     )
+    department_id = db.Column(
+        BigIntegerUnsigned,
+        db.ForeignKey(
+            "departments.id",
+            name="fk_course_resources_department",
+            ondelete="CASCADE",
+        ),
+        nullable=True,
+        index=True,
+    )
     owner_id = db.Column(
         BigIntegerUnsigned,
         db.ForeignKey(
@@ -128,6 +138,7 @@ class CourseResource(db.Model):
         "Course",
         back_populates="resources",
     )
+    department = db.relationship("Department")
 
     owner = db.relationship("User")
 

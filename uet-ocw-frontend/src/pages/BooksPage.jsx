@@ -123,13 +123,14 @@ export default function BooksPage() {
   const filteredBooks = useMemo(() => {
     return books.filter((book) => {
       const course = book.course || coursesById[String(book.course_id)] || null
+      const bookDepartmentId = book.department_id || course?.department_id
       let matchesDepartment = true
 
       if (selectedDepartmentId) {
-        matchesDepartment = String(course?.department_id) === String(selectedDepartmentId)
+        matchesDepartment = String(bookDepartmentId) === String(selectedDepartmentId)
       } else if (selectedFacultyId) {
         const departmentIds = new Set(facultyDepartments.map((department) => String(department.id)))
-        matchesDepartment = departmentIds.has(String(course?.department_id))
+        matchesDepartment = departmentIds.has(String(bookDepartmentId))
       }
 
       const haystack = `${book.title || ''} ${book.description || ''} ${course?.title || ''} ${course?.course_code || ''}`.toLowerCase()
@@ -177,9 +178,9 @@ export default function BooksPage() {
     const department = departments.find((item) => String(item.id) === String(course?.department_id))
     setEditingBookId(book.id)
     setBookForm({
-      is_generic: !book.course_id,
+      is_generic: !book.course_id && !book.department_id,
       faculty_id: department?.faculty_id ? String(department.faculty_id) : '',
-      department_id: course?.department_id ? String(course.department_id) : '',
+      department_id: book.department_id ? String(book.department_id) : course?.department_id ? String(course.department_id) : '',
       course_id: book.course_id ? String(book.course_id) : '',
       title: book.title || '',
       description: book.description || '',
@@ -208,7 +209,11 @@ export default function BooksPage() {
       let fileSize = null
       let mimeType = ''
       let thumbnailValue = bookForm.thumbnail.trim()
-      const bookFolder = bookForm.is_generic ? 'books/resources' : `courses/${bookForm.course_id}/books`
+      const bookFolder = bookForm.is_generic
+        ? 'books/resources'
+        : bookForm.course_id
+          ? `courses/${bookForm.course_id}/books`
+          : `departments/${bookForm.department_id}/books`
       if (bookFile) {
         const uploaded = await uploadFile({ file: bookFile, folder: bookFolder })
         fileUrlValue = uploaded.local_url || uploaded.public_url || uploaded.relative_path || ''
@@ -224,7 +229,8 @@ export default function BooksPage() {
       await sendJson(isEditingBook ? `/course-resources/${editingBookId}` : '/course-resources', {
         method: isEditingBook ? 'PATCH' : 'POST',
         body: {
-          course_id: bookForm.is_generic ? null : Number(bookForm.course_id),
+          course_id: bookForm.is_generic || !bookForm.course_id ? null : Number(bookForm.course_id),
+          department_id: bookForm.is_generic || bookForm.course_id ? null : Number(bookForm.department_id),
           title: bookForm.title,
           resource_type: 'BOOK',
           description: bookForm.description || null,
@@ -411,6 +417,7 @@ export default function BooksPage() {
               <section className="course-grid" aria-label="Books">
                 {filteredBooks.map((book) => {
                   const course = book.course || coursesById[String(book.course_id)] || null
+                  const department = book.department || departments.find((item) => String(item.id) === String(book.department_id)) || null
                   const canEditBook = Boolean(book.can_manage)
                   return (
                     <article key={book.id} className="course-card book-card">
@@ -451,7 +458,7 @@ export default function BooksPage() {
                           <h3>{book.title || 'Untitled book'}</h3>
                           <div className="teacher-strip compact">
                             <span className="teacher-avatar">{initials(course?.title || book.title)}</span>
-                            <span>{course ? formatCourseTitle(course) : 'Generic book'}</span>
+                            <span>{course ? formatCourseTitle(course) : department ? `${department.name} department` : 'Generic book'}</span>
                           </div>
                           <p className={book.description ? 'course-card-description' : 'course-card-description empty'}>
                             {book.description || 'Book details are available in the course reading catalog.'}
@@ -548,6 +555,7 @@ function BookFormDialog({
               value={bookForm.faculty_id}
               onChange={(event) => setBookForm({ ...bookForm, faculty_id: event.target.value, department_id: '', course_id: '' })}
               disabled={bookForm.is_generic}
+              required={!bookForm.is_generic}
             >
               <option value="">All faculties</option>
               {faculties.map((faculty) => (
@@ -574,9 +582,8 @@ function BookFormDialog({
               value={bookForm.course_id}
               onChange={(event) => setBookForm({ ...bookForm, course_id: event.target.value })}
               disabled={bookForm.is_generic}
-              required={!bookForm.is_generic}
             >
-              <option value="">Select course</option>
+              <option value="">Department level (no course)</option>
               {courses.map((course) => (
                 <option key={course.id} value={course.id}>{formatCourseTitle(course)}</option>
               ))}
