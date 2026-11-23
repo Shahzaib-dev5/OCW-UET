@@ -6,6 +6,8 @@ The current production layout is:
 - Gunicorn serves Flask privately on `127.0.0.1:5206`.
 - Nginx proxies `/api`, `/uploads`, `/admin`, `/moderator`, `/apidocs`, and
   `/openapi.json` to Flask.
+- Nginx accepts request bodies up to `100m`, matching Flask's 100 MB upload
+  limit. Requests larger than that receive HTTP 413.
 - `UPLOAD_FOLDER=uploads` is portable. The backend resolves it from the
   `uet-ocw-backend` directory; an absolute production path is also supported.
 
