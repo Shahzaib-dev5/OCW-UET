@@ -81,7 +81,7 @@ For local development, keep `uet-ocw-frontend/.env` blank so Vite proxies API re
 VITE_API_BASE_URL=
 ```
 
-The production frontend build uses `uet-ocw-frontend/.env.production`, currently pointing at `http://10.10.250.163:9999`.
+The production frontend build leaves `VITE_API_BASE_URL` blank so API and upload requests use the same origin and are proxied by Nginx.
 
 Build the frontend for production:
 
