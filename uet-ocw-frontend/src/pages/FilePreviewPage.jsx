@@ -19,8 +19,17 @@ export default function FilePreviewPage() {
         return
       }
       try {
-        const response = await fetch(source, { headers: authenticatedUploadHeaders(source) })
-        if (!response.ok) throw new Error(response.status === 403 ? 'You do not have permission to view this file.' : 'Unable to load this file.')
+        const requestUrl = new URL(source, window.location.href)
+        requestUrl.searchParams.set('_preview', Date.now().toString())
+        const response = await fetch(requestUrl, {
+          headers: authenticatedUploadHeaders(source),
+          cache: 'no-store',
+        })
+        if (!response.ok) {
+          throw new Error(response.status === 403
+            ? 'You do not have permission to view this file.'
+            : `Unable to load this file (HTTP ${response.status}).`)
+        }
         const blob = await response.blob()
 
         if (WORD_DOCUMENT.test(source)) {
