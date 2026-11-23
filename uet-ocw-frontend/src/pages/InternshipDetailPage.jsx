@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import { useAuth } from '../auth/AuthContext'
 import TitleImageFallback from '../components/TitleImageFallback'
-import { fetchJson, fileNameFromUrl, fileUrl, sendJson } from '../data/api'
+import { fetchJson, fileNameFromUrl, fileUrl, sendJson, viewUrl } from '../data/api'
 
 export default function InternshipDetailPage() {
   const { internshipId } = useParams()
@@ -238,7 +238,7 @@ export default function InternshipDetailPage() {
                   </div>
                   <div className="skills-resource-actions">
                     {resourceUrl(resource) && (
-                      <a href={resourceUrl(resource)} target="_blank" rel="noreferrer" aria-label={`View ${resource.title}`}>
+                      <a href={resource.file_url ? viewUrl(resource.file_url) : resourceUrl(resource)} target="_blank" rel="noreferrer" aria-label={`View ${resource.title}`}>
                         <ActionIcon name="view" />
                         <span>View</span>
                       </a>

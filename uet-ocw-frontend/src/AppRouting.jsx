@@ -17,6 +17,7 @@ import AccountPage from './pages/AccountPage'
 import AuthPage from './pages/AuthPage'
 import MyCoursesPage from './pages/MyCoursesPage'
 import AdminPage from './pages/AdminPage'
+import FilePreviewPage from './pages/FilePreviewPage'
 
 export default function AppRouting() {
   return (
@@ -43,6 +44,7 @@ export default function AppRouting() {
           <Route path="/account" element={<AccountPage />} />
           <Route path="/my-courses" element={<MyCoursesPage />} />
           <Route path="/admin" element={<AdminPage />} />
+          <Route path="/preview" element={<FilePreviewPage />} />
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
       </Layout>

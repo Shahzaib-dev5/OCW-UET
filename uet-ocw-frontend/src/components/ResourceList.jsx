@@ -1,4 +1,4 @@
-import { fileUrl } from '../data/api'
+import { viewUrl } from '../data/api'
 
 export default function ResourceList({ title, items }) {
   if (!items || items.length === 0) {
@@ -21,7 +21,7 @@ export default function ResourceList({ title, items }) {
               <p>{item.resource_type || 'Resource'}</p>
             </div>
             {(item.file_url || item.external_url) && (
-              <a href={fileUrl(item.file_url || item.external_url)} target="_blank" rel="noreferrer">
+              <a href={viewUrl(item.file_url || item.external_url)} target="_blank" rel="noreferrer">
                 Open
               </a>
             )}

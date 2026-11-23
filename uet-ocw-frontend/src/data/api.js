@@ -85,6 +85,22 @@ export function fileUrl(url) {
   return `${API_BASE_URL}${path}`
 }
 
+export function viewUrl(url) {
+  const resolved = fileUrl(url)
+  if (!resolved) return ''
+  try {
+    const source = new URL(resolved, window.location.href)
+    const api = new URL(`${API_BASE_URL}/`, window.location.origin)
+    const uploadsPath = `${api.pathname.replace(/\/$/, '')}/uploads/`
+    if (source.origin === api.origin && source.pathname.startsWith(uploadsPath)) {
+      return `/preview?file=${encodeURIComponent(resolved)}`
+    }
+  } catch {
+    return resolved
+  }
+  return resolved
+}
+
 export function authenticatedUploadHeaders(url) {
   if (!url) return {}
   try {

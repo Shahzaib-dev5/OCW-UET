@@ -1,4 +1,4 @@
-import { fileUrl } from '../data/api'
+import { viewUrl } from '../data/api'
 
 export default function SelectedItemResources({ title, description, items, typeLabel }) {
   if (!title) {
@@ -26,7 +26,7 @@ export default function SelectedItemResources({ title, description, items, typeL
                 <p>{item.resource_type || typeLabel}</p>
               </div>
               {(item.file_url || item.external_url) && (
-                <a href={fileUrl(item.file_url || item.external_url)} target="_blank" rel="noreferrer">
+                <a href={viewUrl(item.file_url || item.external_url)} target="_blank" rel="noreferrer">
                   Open
                 </a>
               )}

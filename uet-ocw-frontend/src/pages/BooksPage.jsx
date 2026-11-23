@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { useAuth } from '../auth/AuthContext'
 import TitleImageFallback from '../components/TitleImageFallback'
-import { deleteJson, fetchJson, fileNameFromUrl, fileUrl, sendJson, uploadFile } from '../data/api'
+import { deleteJson, fetchJson, fileNameFromUrl, fileUrl, sendJson, uploadFile, viewUrl } from '../data/api'
 
 export default function BooksPage() {
   const { user, isInstructorMode, isAdmin } = useAuth()
@@ -473,7 +473,7 @@ export default function BooksPage() {
                           <div className="book-card-actions">
                             {book.can_access_materials && book.file_url && (
                               <>
-                                <a href={fileUrl(book.file_url)} target="_blank" rel="noreferrer">View</a>
+                                <a href={viewUrl(book.file_url)} target="_blank" rel="noreferrer">View</a>
                                 <a href={fileUrl(book.file_url)} download={fileNameFromUrl(book.file_url, book.title)}>Download</a>
                               </>
                             )}

@@ -4711,3 +4711,62 @@ img.course-details-image-preview {
     width: 100%;
   }
 }
+.file-preview-page {
+  width: min(1180px, calc(100% - 32px));
+  margin: 32px auto;
+}
+
+.file-preview-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 24px;
+  margin-bottom: 20px;
+}
+
+.file-preview-header h1 {
+  margin: 4px 0 0;
+  overflow-wrap: anywhere;
+}
+
+.word-document-preview {
+  max-width: 900px;
+  min-height: 70vh;
+  margin: 0 auto;
+  padding: clamp(28px, 6vw, 72px);
+  color: #171717;
+  background: #fff;
+  border: 1px solid #d9d9d9;
+  box-shadow: 0 12px 36px rgb(0 0 0 / 8%);
+  line-height: 1.6;
+}
+
+.word-document-preview img {
+  max-width: 100%;
+  height: auto;
+}
+
+.word-document-preview table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.word-document-preview td,
+.word-document-preview th {
+  padding: 8px;
+  border: 1px solid #d9d9d9;
+}
+
+.native-file-preview {
+  width: 100%;
+  min-height: 78vh;
+  background: #fff;
+  border: 1px solid #d9d9d9;
+}
+
+@media (max-width: 640px) {
+  .file-preview-header {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+}
