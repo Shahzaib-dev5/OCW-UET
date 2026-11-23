@@ -5,6 +5,7 @@ import re
 from pathlib import Path
 
 from flask import Flask, jsonify, render_template_string, request, send_from_directory
+from flask_cors import cross_origin
 from sqlalchemy import func, or_, select
 
 from config import Config
@@ -105,6 +106,25 @@ def create_app(config_class=Config):
         response.headers["Cache-Control"] = "private, no-store, max-age=0"
         response.headers.pop("ETag", None)
         response.headers.pop("Last-Modified", None)
+        return response
+
+    @app.get("/api/upload-preview")
+    @cross_origin(expose_headers=["Content-Range"])
+    def uploaded_word_preview():
+        filename = request.args.get("file", "")
+        if not filename.lower().endswith(".docx"):
+            return jsonify(status="error", message="Select a Word document to preview."), 400
+        if not _can_serve_upload(filename):
+            return jsonify(status="error", message="Authentication or approved enrollment is required for this file"), 403
+
+        response = send_from_directory(
+            _resolve_upload_root(), filename,
+            mimetype="application/octet-stream",
+            conditional=True, etag=False,
+        )
+        # This endpoint supplies bytes to the preview, without a download filename.
+        response.headers.pop("Content-Disposition", None)
+        response.headers["Cache-Control"] = "private, no-store"
         return response
 
     @app.route("/upload-test")

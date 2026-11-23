@@ -116,6 +116,18 @@ export function authenticatedUploadHeaders(url) {
   }
 }
 
+export function wordPreviewUrl(url) {
+  const api = new URL(`${API_BASE_URL}/`, window.location.origin)
+  const source = new URL(url, window.location.href)
+  const uploadsPath = `${api.pathname.replace(/\/$/, '')}/uploads/`
+  if (source.origin !== api.origin || !source.pathname.startsWith(uploadsPath)) {
+    throw new Error('Word previews are available for files uploaded to this site.')
+  }
+  const endpoint = new URL('api/upload-preview', api)
+  endpoint.searchParams.set('file', decodeURIComponent(source.pathname.slice(uploadsPath.length)))
+  return endpoint
+}
+
 export function fileNameFromUrl(url, fallback = 'resource') {
   const value = String(url || '').split('?')[0].split('#')[0]
   const filename = value.split('/').filter(Boolean).pop()
