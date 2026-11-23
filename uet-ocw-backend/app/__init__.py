@@ -86,7 +86,7 @@ def create_app(config_class=Config):
     def uploaded_file(filename):
         if not _can_serve_upload(filename):
             return jsonify({"status": "error", "message": "Authentication or approved enrollment is required for this file"}), 403
-        upload_root = os.getenv("UPLOAD_FOLDER", str(Path(__file__).resolve().parents[1] / "uploads"))
+        upload_root = _resolve_upload_root()
         guessed_mimetype = mimetypes.guess_type(filename)[0] or "application/octet-stream"
         response = send_from_directory(
             upload_root,
@@ -208,6 +208,21 @@ def create_app(config_class=Config):
     app.register_blueprint(moderator_dashboard_bp)
 
     return app
+
+
+def _resolve_upload_root():
+    """Resolve relative upload folders from the backend project root.
+
+    Flask resolves relative ``send_from_directory`` paths from the application
+    package, while upload writes normally resolve them from the process working
+    directory. Resolving once here keeps reads and writes pointed at the same
+    directory in local development and production services.
+    """
+    backend_root = Path(__file__).resolve().parents[1]
+    configured = Path(os.getenv("UPLOAD_FOLDER", "uploads")).expanduser()
+    if not configured.is_absolute():
+        configured = backend_root / configured
+    return configured.resolve()
 
 
 def _can_serve_upload(filename):

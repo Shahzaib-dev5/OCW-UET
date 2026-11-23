@@ -1,0 +1,14 @@
+[Unit]
+Description=UET OCW Flask Backend
+After=network.target
+
+[Service]
+User=root
+WorkingDirectory=/opt/uet-ocw/uet-ocw-backend
+EnvironmentFile=/opt/uet-ocw/uet-ocw-backend/.env
+ExecStart=/opt/uet-ocw/uet-ocw-backend/venv/bin/gunicorn --workers 3 --bind 127.0.0.1:5206 --timeout 120 run:app
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target
