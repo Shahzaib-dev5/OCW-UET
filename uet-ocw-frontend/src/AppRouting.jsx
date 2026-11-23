@@ -45,6 +45,7 @@ export default function AppRouting() {
           <Route path="/my-courses" element={<MyCoursesPage />} />
           <Route path="/admin" element={<AdminPage />} />
           <Route path="/preview" element={<FilePreviewPage />} />
+          <Route path="/preview-v2" element={<FilePreviewPage />} />
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
       </Layout>

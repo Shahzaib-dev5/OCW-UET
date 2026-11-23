@@ -93,7 +93,7 @@ export function viewUrl(url) {
     const api = new URL(`${API_BASE_URL}/`, window.location.origin)
     const uploadsPath = `${api.pathname.replace(/\/$/, '')}/uploads/`
     if (source.origin === api.origin && source.pathname.startsWith(uploadsPath)) {
-      return `/preview?file=${encodeURIComponent(resolved)}`
+      return `/preview-v2?file=${encodeURIComponent(resolved)}`
     }
   } catch {
     return resolved
