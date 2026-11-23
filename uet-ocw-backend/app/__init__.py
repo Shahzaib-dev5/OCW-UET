@@ -94,9 +94,17 @@ def create_app(config_class=Config):
             mimetype=guessed_mimetype,
             as_attachment=False,
             download_name=Path(filename).name,
+            conditional=False,
+            max_age=0,
         )
         safe_filename = Path(filename).name.replace('"', "")
         response.headers["Content-Disposition"] = f'inline; filename="{safe_filename}"'
+        # Access to uploads depends on the current user and enrollment state.
+        # Always return a complete body so authenticated browser previews do not
+        # receive an unusable 304 response without a matching fetch cache entry.
+        response.headers["Cache-Control"] = "private, no-store, max-age=0"
+        response.headers.pop("ETag", None)
+        response.headers.pop("Last-Modified", None)
         return response
 
     @app.route("/upload-test")
