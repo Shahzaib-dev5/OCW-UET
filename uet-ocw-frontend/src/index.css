@@ -3388,6 +3388,16 @@ p {
   top: auto;
 }
 
+.talk-card-controls .book-edit-button {
+  align-items: center;
+  display: inline-flex;
+  justify-content: center;
+}
+
+.invited-talks-page .research-card {
+  position: relative;
+}
+
 .book-delete-button:disabled {
   cursor: wait;
   opacity: 0.65;
@@ -4295,6 +4305,25 @@ img.course-details-image-preview {
   stroke-linejoin: round;
   stroke-width: 2;
   width: 16px;
+}
+
+.lecture-stack-item .talk-resource-stack-actions {
+  display: flex;
+  gap: 6px;
+}
+
+.lecture-stack-item .talk-resource-stack-actions button {
+  font-size: 0.72rem;
+  height: auto;
+  min-width: 48px;
+  padding: 6px 8px;
+  width: auto;
+}
+
+.lecture-stack-item .talk-resource-stack-actions button:first-child {
+  background: #eef6fd;
+  border-color: #bad7ef;
+  color: #0f5f99;
 }
 
 .lecture-dialog-actions {

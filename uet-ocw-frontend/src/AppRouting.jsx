@@ -11,6 +11,7 @@ import InternshipPage from './pages/InternshipPage'
 import InternshipDetailPage from './pages/InternshipDetailPage'
 import InvitedTalkPage from './pages/InvitedTalkPage'
 import InvitedTalkDetailPage from './pages/InvitedTalkDetailPage'
+import InvitedTalkEditorPage from './pages/InvitedTalkEditorPage'
 import ResearchPage from './pages/ResearchPage'
 import ResearchDetailPage from './pages/ResearchDetailPage'
 import AccountPage from './pages/AccountPage'
@@ -34,6 +35,8 @@ export default function AppRouting() {
           <Route path="/skills-development" element={<InternshipPage />} />
           <Route path="/skills-development/:internshipId" element={<InternshipDetailPage />} />
           <Route path="/invited-talks" element={<InvitedTalkPage />} />
+          <Route path="/invited-talks/new" element={<InvitedTalkEditorPage />} />
+          <Route path="/invited-talks/:talkId/edit" element={<InvitedTalkEditorPage />} />
           <Route path="/invited-talks/:talkId" element={<InvitedTalkDetailPage />} />
           <Route path="/internships" element={<Navigate to="/skills-development" replace />} />
           <Route path="/internships/:internshipId" element={<LegacySkillsDevelopmentRedirect />} />

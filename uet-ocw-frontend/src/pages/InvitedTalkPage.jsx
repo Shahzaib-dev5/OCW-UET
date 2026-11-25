@@ -1,8 +1,10 @@
 import { useEffect, useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
-import { fetchJson } from '../data/api'
+import { deleteJson, fetchJson } from '../data/api'
+import { useAuth } from '../auth/AuthContext'
 
 export default function InvitedTalkPage() {
+  const { isApprovedInstructor, isInstructorMode } = useAuth()
   const [faculties, setFaculties] = useState([])
   const [departments, setDepartments] = useState([])
   const [talks, setTalks] = useState([])
@@ -12,6 +14,7 @@ export default function InvitedTalkPage() {
   const [debouncedSearchTerm, setDebouncedSearchTerm] = useState('')
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
+  const [deletingTalkId, setDeletingTalkId] = useState(null)
 
   useEffect(() => {
     async function loadData() {
@@ -84,6 +87,21 @@ export default function InvitedTalkPage() {
     setSelectedFacultyId(null)
     setSelectedDepartmentId(null)
     setSearchTerm('')
+  }
+
+  const removeTalk = async (talk) => {
+    if (!window.confirm(`Delete "${talk.talk_title || 'this tech talk'}" and all of its resources?`)) return
+
+    try {
+      setDeletingTalkId(talk.id)
+      setError('')
+      await deleteJson(`/invited-talks/${talk.id}`)
+      setTalks((currentTalks) => currentTalks.filter((item) => item.id !== talk.id))
+    } catch (removeError) {
+      setError(removeError.message || 'Unable to delete the tech talk.')
+    } finally {
+      setDeletingTalkId(null)
+    }
   }
 
   return (
@@ -164,12 +182,35 @@ export default function InvitedTalkPage() {
               <p className="course-result-count" aria-live="polite">
                 {filteredTalks.length} {filteredTalks.length === 1 ? 'talk' : 'talks'}
               </p>
+              {isApprovedInstructor && isInstructorMode && (
+                <Link className="primary-button small" to="/invited-talks/new">+ Add Tech Talk</Link>
+              )}
             </section>
 
             {filteredTalks.length ? (
               <section className="course-grid" aria-label="Tech talks">
                 {filteredTalks.map((talk) => (
                   <article key={talk.id} className="course-card research-card">
+                    {talk.can_manage && isInstructorMode && (
+                      <div className="book-card-controls talk-card-controls">
+                        <Link
+                          className="lecture-edit-button book-edit-button"
+                          to={`/invited-talks/${talk.id}/edit`}
+                          aria-label={`Edit ${talk.talk_title || 'tech talk'}`}
+                        >
+                          <EditIcon />
+                        </Link>
+                        <button
+                          type="button"
+                          className="lecture-delete-button book-delete-button"
+                          aria-label={`Delete ${talk.talk_title || 'tech talk'}`}
+                          disabled={deletingTalkId === talk.id}
+                          onClick={() => removeTalk(talk)}
+                        >
+                          <TrashIcon />
+                        </button>
+                      </div>
+                    )}
                     <Link className="course-card-link" to={`/invited-talks/${talk.id}`} aria-label={`View ${talk.talk_title || 'tech talk'}`}>
                       <div className="course-card-media-wrap">
                         <div className="course-card-media placeholder research-card-media" aria-hidden="true">
@@ -238,4 +279,20 @@ function initials(name) {
     .slice(0, 2)
     .map((part) => part[0]?.toUpperCase())
     .join('')
+}
+
+function EditIcon() {
+  return (
+    <svg aria-hidden="true" viewBox="0 0 16 16" focusable="false">
+      <path d="M3 11.5V13h1.5l7.1-7.1-1.5-1.5L3 11.5zM10.8 3.7l1.5 1.5.7-.7a1.05 1.05 0 0 0-1.5-1.5z" />
+    </svg>
+  )
+}
+
+function TrashIcon() {
+  return (
+    <svg aria-hidden="true" viewBox="0 0 16 16" focusable="false">
+      <path d="M3 4.5h10M6 4.5V3h4v1.5M5 6v6.5h6V6M7 7.5v3.5M9 7.5v3.5" />
+    </svg>
+  )
 }
