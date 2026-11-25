@@ -1,21 +1,38 @@
 const CHUNK_SIZE = 2 * 1024 * 1024
+const MAX_CONCURRENT_CHUNKS = 3
 const CONTENT_RANGE = /^bytes (\d+)-(\d+)\/(\d+)$/
 
-export async function readWordPreview(url, headers, signal) {
-  const parts = []
-  let offset = 0
-  let total
+export async function readWordPreview(url, headers, signal, onProgress = () => {}) {
+  const first = await readChunk(url, headers, signal, 0, CHUNK_SIZE - 1)
+  const total = first.range.total
+  const parts = new Array(Math.ceil(total / CHUNK_SIZE))
+  parts[0] = first.body
+  let loaded = first.body.byteLength
+  onProgress({ loaded, total })
 
-  do {
-    const end = Math.min(offset + CHUNK_SIZE, total ?? Infinity) - 1
-    const { body, range } = await readChunk(url, headers, signal, offset, end)
-    if (total !== undefined && total !== range.total) {
-      throw new Error('The file changed while loading. Reopen the preview to try again.')
+  const pendingIndexes = Array.from({ length: parts.length - 1 }, (_, index) => index + 1)
+  let nextTask = 0
+
+  async function worker() {
+    while (nextTask < pendingIndexes.length) {
+      const partIndex = pendingIndexes[nextTask]
+      nextTask += 1
+      const offset = partIndex * CHUNK_SIZE
+      const end = Math.min(offset + CHUNK_SIZE, total) - 1
+      const { body, range } = await readChunk(url, headers, signal, offset, end)
+      if (range.total !== total) {
+        throw new Error('The file changed while loading. Reopen the preview to try again.')
+      }
+      parts[partIndex] = body
+      loaded += body.byteLength
+      onProgress({ loaded, total })
     }
-    parts.push(body)
-    total = range.total
-    offset = range.end + 1
-  } while (offset < total)
+  }
+
+  await Promise.all(Array.from(
+    { length: Math.min(MAX_CONCURRENT_CHUNKS, pendingIndexes.length) },
+    worker,
+  ))
 
   return new Blob(parts).arrayBuffer()
 }

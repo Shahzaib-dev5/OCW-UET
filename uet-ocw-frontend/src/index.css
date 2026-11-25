@@ -4793,6 +4793,21 @@ img.course-details-image-preview {
   border: 1px solid #d9d9d9;
 }
 
+.preview-progress {
+  display: grid;
+  gap: 0.7rem;
+}
+
+.preview-progress p {
+  margin: 0;
+}
+
+.preview-progress progress {
+  width: min(32rem, 100%);
+  height: 0.75rem;
+  accent-color: var(--brand-primary, #0b6b3a);
+}
+
 @media (max-width: 640px) {
   .file-preview-header {
     align-items: flex-start;
